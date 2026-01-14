@@ -36,6 +36,7 @@ Inicialmente, la secuencia se realizó forzando el estado de cada pin. Esto es �
 	      /* 4. Apagar todo y reiniciar ciclo */
 	      HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_RESET);
   }
+```
 
 ### 2. Optimización con HAL_GPIO_TogglePin
 Posteriormente, se refactorizó el código para utilizar **Toggle**, que invierte el estado lógico actual del pin.
@@ -68,7 +69,7 @@ while (1)
     HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
     HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
 }
-
+```
 ## ⚠️ Nota importante sobre HAL_Delay()
 
 La función `HAL_Delay(ms)` es la forma más sencilla de generar pausas, pero tiene una característica crítica: **es una función bloqueante**.
