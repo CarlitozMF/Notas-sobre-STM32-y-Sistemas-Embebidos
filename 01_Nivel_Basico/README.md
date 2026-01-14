@@ -10,8 +10,8 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 ## 📂 Contenido del Repositorio
 
 ### 🏗️ 01_Basics
-1. **[01_Blinky_GPIO](./01_Basics/01_Blinky_GPIO):** Hola Mundo visual controlando los LEDs de usuario.
-2. **02_Variable_Types:** (Próximamente) Tipos de datos y gestión de memoria.
+1. **[01_Hola_Mundo_GPIO](./01_Nivel_Basico/01_Hola_Mundo_GPIO):** Hola Mundo visual controlando los LEDs de usuario.
+2. **02_Tipos_De_Variables:** (Próximamente) Tipos de datos y gestión de memoria.
 
 ---
 *Aprendiendo paso a paso el control del silicio.*
