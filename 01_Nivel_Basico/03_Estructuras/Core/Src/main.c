@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,10 +53,39 @@ static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
+/* Prototipos de funciones */
+void Debug_Log(const char *msg);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/* --- ESTRUCTURAS PARA LA LECCIÓN --- */
+
+// 1. Estructura DESORDENADA (Mucho Padding)
+// El compilador inserta huecos para alinear los datos de 32 bits.
+typedef struct {
+    uint8_t  id;          // 1 byte  (+ 3 bytes de padding para alinear el uint32)
+    uint32_t timestamp;   // 4 bytes
+    uint8_t  estado;      // 1 byte  (+ 3 bytes de padding para alinear el float)
+    float    lectura;     // 4 bytes
+} Estructura_Gorda_t;
+
+// 2. Estructura OPTIMIZADA (Orden de mayor a menor)
+// Agrupando tipos iguales o mayores primero, reducimos el desperdicio.
+typedef struct {
+    uint32_t timestamp;   // 4 bytes
+    float    lectura;     // 4 bytes
+    uint8_t  id;          // 1 byte
+    uint8_t  estado;      // 1 byte (+ 2 bytes de padding al final para cerrar el bloque de 4)
+} Estructura_Flaca_t;
+
+
+/* Función de asistencia */
+void Debug_Log(const char *msg) {
+    HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
+}
 
 /* USER CODE END 0 */
 
@@ -90,7 +120,30 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  char buffer[128];
 
+    Debug_Log("\r\n=============================================\r\n");
+    Debug_Log("   NOTAS STM32: OPTIMIZACIÓN DE MEMORIA      \r\n");
+    Debug_Log("=============================================\r\n");
+
+    // Cálculo de tamaños
+    uint32_t size_gorda = sizeof(Estructura_Gorda_t);
+    uint32_t size_flaca = sizeof(Estructura_Flaca_t);
+    uint32_t ahorro = size_gorda - size_flaca;
+
+    // Reporte por UART
+    sprintf(buffer, "1. Estructura Desordenada: %lu bytes\r\n", size_gorda);
+    Debug_Log(buffer);
+
+    sprintf(buffer, "2. Estructura Optimizada  : %lu bytes\r\n", size_flaca);
+    Debug_Log(buffer);
+
+    sprintf(buffer, ">>> AHORRO DE RAM: %lu bytes (%.0f%%)\r\n", ahorro, ((float)ahorro/size_gorda)*100);
+    Debug_Log(buffer);
+
+    Debug_Log("---------------------------------------------\r\n");
+    Debug_Log("Nota: Reordena de mayor a menor tamano.\r\n");
+    Debug_Log("=============================================\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,6 +153,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  // Toggle LED para saber que el micro sigue vivo
+	      HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
+	      HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 }
