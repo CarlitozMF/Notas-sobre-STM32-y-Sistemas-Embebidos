@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/banner.png" alt="Banner STM32" width="100%">
+  <img src="./assets/portada.png" alt="Banner STM32" width="100%">
 
   # Notas sobre STM32 y Sistemas Embebidos 🚀
   
