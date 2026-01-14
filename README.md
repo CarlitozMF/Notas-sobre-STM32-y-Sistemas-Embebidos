@@ -24,7 +24,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ## 📂 Estructura del Aprendizaje
 
-### 🏗️ 01_Nivel Basico (Fundamentos)
+### 🏗️ 01_Nivel Basico (Fundamentos) -En Curso 14/01/2026-
 * **01_Hola_Mundo_GPIO:** Hola Mundo visual controlando los LEDs de la placa.
 * **02_Tipos_De_Variables:** Gestión de memoria y tipos de datos de ancho fijo (`stdint.h`).
 
