@@ -1,4 +1,4 @@
-# 01_Blinky_GPIO - El Hola Mundo Embebido
+# 01_Hola_Mundo_GPIO - El Hola Mundo Embebido
 
 Este proyecto implementa una secuencia de parpadeo (desplazamiento de luz) utilizando los tres LEDs integrados en la placa Nucleo-F439ZI.
 
