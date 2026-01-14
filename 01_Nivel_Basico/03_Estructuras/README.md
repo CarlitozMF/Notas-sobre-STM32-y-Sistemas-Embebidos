@@ -24,12 +24,6 @@ En este ejemplo comparamos dos estructuras con los mismos datos:
 - **Estructura Desordenada:** Genera huecos de padding entre variables pequeñas y grandes.
 - **Estructura Optimizada:** Agrupa variables pequeñas al final, permitiendo que el compilador las "empaquete" mejor.
 
-## 🔧 Solución de Problemas: Soporte para Floats
-Al usar `sprintf` con variables tipo `float` en STM32CubeIDE, es posible que no se muestren los datos o se reciba un error. 
-**Solución:**
-1. Ir a `Project Properties` > `C/C++ Build` > `Settings`.
-2. En `Tool Settings` > `MCU Settings`, marcar la casilla: **"Use float with printf from newlib-nano (-u _printf_float)"**.
-
 ## 💻 Fragmento de Código Clave
 ```c
 // Estructura optimizada para ahorrar RAM

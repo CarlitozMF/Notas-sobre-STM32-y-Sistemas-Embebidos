@@ -30,6 +30,12 @@ Para mostrar datos por consola, debemos indicar al compilador cómo interpretar 
 | `%x` / `%X` | `uint32_t` | Valor en **Hexadecimal** (ideal para debugear registros). |
 | `%p` | `void*` | Dirección de memoria (Puntero). |
 
+## 🔧 Solución de Problemas: Soporte para Floats
+Al usar `sprintf` con variables tipo `float` en STM32CubeIDE, es posible que no se muestren los datos o se reciba un error. 
+**Solución:**
+1. Ir a `Project Properties` > `C/C++ Build` > `Settings`.
+2. En `Tool Settings` > `MCU Settings`, marcar la casilla: **"Use float with printf from newlib-nano (-u _printf_float)"**.
+
 ## 📏 La importancia de `sizeof` y `%zu`
 El operador `sizeof` devuelve un tipo de dato llamado `size_t`. 
 - **Por qué usarlo:** Permite que el código sea portable. No importa si el micro es de 8 o 32 bits, `sizeof` siempre devolverá el tamaño correcto.
