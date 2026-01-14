@@ -9,12 +9,12 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 
 ## 📂 Estructura del Aprendizaje
 
-### 🏗️ 01_Basics (Fundamentos)
+### 🏗️ 01_Nivel Basico (Fundamentos)
 - **01_Hola_Mundo_GPIO:** Hola Mundo visual controlando los LEDs de la placa.
 - **02_Tipos_De_Variables:** Gestión de memoria y tipos de datos de ancho fijo (`stdint.h`).
 - **03_Bitwise_Logic:** Manipulación de registros mediante lógica de bits.
 
-### ⚙️ 02_Intermediate (Periféricos y Control)
+### ⚙️ 02_Nivel Intermedio (Periféricos y Control)
 - **01_EXTI_Interrupciones:** Manejo de interrupciones externas con el encoder rotativo KY-040.
 - **02_Timers_PWM:** Control de tiempos y señales analógicas simuladas.
 
