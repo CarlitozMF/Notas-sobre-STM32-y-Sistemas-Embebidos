@@ -42,18 +42,6 @@ En este ejemplo, observamos qué sucede cuando una variable supera su valor máx
 - Un `uint8_t` que vale **255** y recibe un incremento (`++`), vuelve automáticamente a **0**.
 - **Impacto:** Si se usa un tipo de dato pequeño para una variable que crece constantemente (como el tiempo), el sistema fallará o tendrá comportamientos erráticos al "dar la vuelta".
 
-
-
-## 🛠️ Herramientas de Desarrollo
-### Abstracción: `Debug_Log`
-Se implementó una función personalizada para simplificar el envío de datos por la **UART3** (conectada al puerto USB de la Nucleo-F439ZI).
-
-```c
-void Debug_Log(const char *msg) {
-    HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
-}
-```
-
 ## 📏 La Importancia de sizeof en Sistemas Embebidos
 
 💡 Breve Explicación Técnica
@@ -72,3 +60,12 @@ El operador `sizeof` devuelve un tipo de dato llamado `size_t`.
 - **Por qué usarlo:** Permite que el código sea portable. No importa si el micro es de 8 o 32 bits, `sizeof` siempre devolverá el tamaño correcto.
 - **En el código:** Al imprimirlo, lo ideal es usar `%zu` o `%lu` para evitar que el compilador emita advertencias sobre el tamaño de los argumentos.
 
+## 🛠️ Herramientas de Desarrollo
+### Abstracción: `Debug_Log`
+Se implementó una función personalizada para simplificar el envío de datos por la **UART3** (conectada al puerto USB de la Nucleo-F439ZI).
+
+```c
+void Debug_Log(const char *msg) {
+    HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
+}
+```
