@@ -17,6 +17,24 @@ En lugar de usar `int` o `long`, utilizamos la librería `<stdint.h>` para asegu
 | `uint32_t` | 4 Bytes | 0 a 4,294,967,295 | Marcas de tiempo (`HAL_GetTick()`). |
 | `float` | 4 Bytes | Decimales | Cálculos de sensores analógicos. |
 
+## 📊 Tabla de Especificadores de Formato (printf/sprintf)
+Para mostrar datos por consola, debemos indicar al compilador cómo interpretar los bytes. Usar el especificador incorrecto puede generar datos erróneos o *Warnings*.
+
+| Especificador | Tipo de Dato C | Descripción |
+| :--- | :--- | :--- |
+| `%u` | `uint8_t`, `uint16_t` | Entero sin signo (pequeño). |
+| `%d` | `int8_t`, `int16_t` | Entero con signo. |
+| **`%lu`** | **`uint32_t`** | **Unsigned Long**: Indispensable para `HAL_GetTick()`. |
+| **`%zu`** | **`size_t`** | Especificador estándar para el operador `sizeof`. |
+| `%f` | `float` | Punto flotante (decimales). |
+| `%x` / `%X` | `uint32_t` | Valor en **Hexadecimal** (ideal para debugear registros). |
+| `%p` | `void*` | Dirección de memoria (Puntero). |
+
+## 📏 La importancia de `sizeof` y `%zu`
+El operador `sizeof` devuelve un tipo de dato llamado `size_t`. 
+- **Por qué usarlo:** Permite que el código sea portable. No importa si el micro es de 8 o 32 bits, `sizeof` siempre devolverá el tamaño correcto.
+- **En el código:** Al imprimirlo, lo ideal es usar `%zu` o `%lu` para evitar que el compilador emita advertencias sobre el tamaño de los argumentos.
+
 ## ⚠️ El Fenómeno del Overflow
 En este ejemplo, observamos qué sucede cuando una variable supera su valor máximo permitido por su tamaño de bits:
 - Un `uint8_t` que vale **255** y recibe un incremento (`++`), vuelve automáticamente a **0**.
