@@ -29,7 +29,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **02_Tipos_De_Variables:** Gestión de memoria y tipos de datos de ancho fijo (`stdint.h`).
 
 
-### ⚙️ 02_Nivel Intermedio (Periféricos y Control)
+### ⚙️ 02_Nivel Intermedio (Periféricos y Control) -PROXIMAMENTE-
 * **01_EXTI_Interrupciones:** Manejo de interrupciones externas.
 * **02_Timers_PWM:** Control de tiempos y señales analógicas simuladas.
 
