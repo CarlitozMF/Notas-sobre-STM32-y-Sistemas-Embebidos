@@ -90,7 +90,8 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  // Forzamos que el primer LED empiece encendido para iniciar la cadena
+  HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,22 +101,20 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  /* 1. Encender LED Verde (LD1) y esperar 500ms */
-	      HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
-	      HAL_Delay(500);
+	  	  HAL_Delay(500);
+	      // 1. Apaga Verde (LD1) y enciende Azul (LD2)
+	      HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
+	      HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
 
-	      /* 2. Encender LED Azul (LD2) y apagar el Verde */
-	      HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_RESET);
-	      HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_SET);
 	      HAL_Delay(500);
+	      // 2. Apaga Azul (LD2) y enciende Rojo (LD3)
+	      HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
+	      HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
 
-	      /* 3. Encender LED Rojo (LD3) y apagar el Azul */
-	      HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_RESET);
-	      HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_SET);
 	      HAL_Delay(500);
-
-	      /* 4. Apagar todo y reiniciar ciclo */
-	      HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_RESET);
+	      // 3. Apaga Rojo (LD3) y enciende Verde (LD1) para reiniciar
+	      HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
+	      HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
   }
   /* USER CODE END 3 */
 }
