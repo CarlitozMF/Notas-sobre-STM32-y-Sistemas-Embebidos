@@ -1,4 +1,4 @@
-# 02_Variable_Types - Tipos de Datos y Memoria 🧠
+# 02_Tipo_De_Variables - Tipos de Datos y Memoria 🧠
 
 Este módulo se centra en entender cómo el microcontrolador gestiona la memoria RAM y cómo elegir el tipo de dato correcto para optimizar recursos y evitar errores críticos.
 
