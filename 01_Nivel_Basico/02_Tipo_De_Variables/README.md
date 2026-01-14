@@ -36,10 +36,6 @@ Al usar `sprintf` con variables tipo `float` en STM32CubeIDE, es posible que no 
 1. Ir a `Project Properties` > `C/C++ Build` > `Settings`.
 2. En `Tool Settings` > `MCU Settings`, marcar la casilla: **"Use float with printf from newlib-nano (-u _printf_float)"**.
 
-## 📏 La importancia de `sizeof` y `%zu`
-El operador `sizeof` devuelve un tipo de dato llamado `size_t`. 
-- **Por qué usarlo:** Permite que el código sea portable. No importa si el micro es de 8 o 32 bits, `sizeof` siempre devolverá el tamaño correcto.
-- **En el código:** Al imprimirlo, lo ideal es usar `%zu` o `%lu` para evitar que el compilador emita advertencias sobre el tamaño de los argumentos.
 
 ## ⚠️ El Fenómeno del Overflow
 En este ejemplo, observamos qué sucede cuando una variable supera su valor máximo permitido por su tamaño de bits:
@@ -58,7 +54,11 @@ void Debug_Log(const char *msg) {
 }
 ```
 
-📏 La Importancia de sizeof en Sistemas Embebidos
+## 📏 La Importancia de sizeof en Sistemas Embebidos
+
+💡 Breve Explicación Técnica
+
+sizeof es un operador en tiempo de compilación. Esto significa que no consume ciclos de reloj del procesador mientras tu programa corre; el compilador calcula el tamaño y sustituye el sizeof por el número constante antes de grabar el código en la memoria Flash del microcontrolador.
 
 El uso de sizeof es una de las mejores prácticas en la programación de microcontroladores por tres razones fundamentales:
 
@@ -68,6 +68,7 @@ El uso de sizeof es una de las mejores prácticas en la programación de microco
 
 - Cálculo de Elementos en Arreglos: Es la forma más segura de saber cuántos elementos tiene un arreglo sin contarlos a mano: int num_elementos = sizeof(mi_arreglo) / sizeof(mi_arreglo[0]);
 
-💡 Breve Explicación Técnica
+El operador `sizeof` devuelve un tipo de dato llamado `size_t`. 
+- **Por qué usarlo:** Permite que el código sea portable. No importa si el micro es de 8 o 32 bits, `sizeof` siempre devolverá el tamaño correcto.
+- **En el código:** Al imprimirlo, lo ideal es usar `%zu` o `%lu` para evitar que el compilador emita advertencias sobre el tamaño de los argumentos.
 
-sizeof es un operador en tiempo de compilación. Esto significa que no consume ciclos de reloj del procesador mientras tu programa corre; el compilador calcula el tamaño y sustituye el sizeof por el número constante antes de grabar el código en la memoria Flash del microcontrolador.
