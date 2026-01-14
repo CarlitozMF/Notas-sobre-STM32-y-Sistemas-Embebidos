@@ -38,11 +38,11 @@ void Debug_Log(const char *msg) {
 
 El uso de sizeof es una de las mejores prácticas en la programación de microcontroladores por tres razones fundamentales:
 
--Portabilidad del Código: A diferencia de la programación en PC, en el mundo de los sistemas embebidos el tamaño de un int o un long no es estándar; depende de la arquitectura del procesador (8, 16, 32 o 64 bits). sizeof permite que el código se adapte automáticamente al hardware donde se compila.
+- Portabilidad del Código: A diferencia de la programación en PC, en el mundo de los sistemas embebidos el tamaño de un int o un long no es estándar; depende de la arquitectura del procesador (8, 16, 32 o 64 bits). sizeof permite que el código se adapte automáticamente al hardware donde se compila.
 
--Seguridad en el Manejo de Buffers: Cuando usamos funciones como HAL_UART_Transmit o memcpy, necesitamos indicar cuántos bytes vamos a procesar. Usar sizeof(mi_variable) en lugar de un número fijo (como "4") evita errores de desbordamiento de memoria (Buffer Overflow) si en el futuro decidimos cambiar el tipo de la variable.
+- Seguridad en el Manejo de Buffers: Cuando usamos funciones como HAL_UART_Transmit o memcpy, necesitamos indicar cuántos bytes vamos a procesar. Usar sizeof(mi_variable) en lugar de un número fijo (como "4") evita errores de desbordamiento de memoria (Buffer Overflow) si en el futuro decidimos cambiar el tipo de la variable.
 
--Cálculo de Elementos en Arreglos: Es la forma más segura de saber cuántos elementos tiene un arreglo sin contarlos a mano: int num_elementos = sizeof(mi_arreglo) / sizeof(mi_arreglo[0]);
+- Cálculo de Elementos en Arreglos: Es la forma más segura de saber cuántos elementos tiene un arreglo sin contarlos a mano: int num_elementos = sizeof(mi_arreglo) / sizeof(mi_arreglo[0]);
 
 💡 Breve Explicación Técnica
 
