@@ -9,7 +9,7 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 
 ## 📂 Contenido del Repositorio
 
-### 🏗️ 01_Basics
+### 🏗️ 01_Nivel Básico
 1. **[01_Hola_Mundo_GPIO](./01_Hola_Mundo_GPIO):** Hola Mundo visual controlando los LEDs de usuario.
 2. **[02_Tipos_De_Variables](./02_Tipo_De_Variables):** Tipos de datos y gestión de memoria.
 
