@@ -24,18 +24,18 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ## 📂 Estructura del Aprendizaje
 
-### 🏗️ 01_Nivel Basico (Fundamentos de C y Periféricos Simples) -En Curso 15/01/2026-
+### 🏗️ 01_Nivel Basico (El lenguaje C aplicado a registros y GPIO.) -En Curso 15/01/2026-
 * **01_Hola_Mundo:** *Hola Mundo visual controlando los LEDs de la placa.*
 * **02_Tipos_De_Variables:** *Gestión de memoria y tipos de datos de ancho fijo (`stdint.h`).*
 * **03_Estructuras:** *Estructuras - Optimización de Memoria RAM*
 * **04_Bitwise_Logic** *Lógica de Bits*
 * **05_GPIO_Input_Polling** *Entradas Digitales*
 
-### ⚙️ 02_Nivel Intermedio (Periféricos y Control) -PROXIMAMENTE-
+### ⚙️ 02_Nivel Intermedio (El poder de los Periféricos: Timers, UART, Interrupciones, ETC) -PROXIMAMENTE-
 * **01_EXTI_Interrupciones:** Manejo de interrupciones externas.
-* **02_Timers_PWM:** Control de tiempos y señales analógicas simuladas.
+* **02_Timers:** Control de tiempos y señales analógicas simuladas.
 
-### 🚀 03_Nivel Avanzado (Arquitectura, Optimización y RTOS) -PROXIMAMENTE-
+### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento: DMA, RTOS, Low Power, ETC) -PROXIMAMENTE-
 
 ---
 
