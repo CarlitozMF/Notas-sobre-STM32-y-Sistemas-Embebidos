@@ -49,4 +49,5 @@ uint8_t read_addr = (DEVICE_ADDR << 1) | 0x01;
 
 En este ejemplo utilizamos el especificador %02X en sprintf. ¿Por qué? Porque el sistema decimal no permite ver los bits claramente. En Hexadecimal, cada dígito representa exactamente 4 bits, lo que hace que identificar qué bit está encendido sea mucho más rápido e intuitivo para un programador de embebidos.
 
-Notas sobre manipulación de registros y protocolos serie para STM32.
+---
+*Notas sobre manipulación de registros y protocolos serie para STM32.*
