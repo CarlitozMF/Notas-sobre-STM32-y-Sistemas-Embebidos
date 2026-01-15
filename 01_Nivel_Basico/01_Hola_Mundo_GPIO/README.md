@@ -77,3 +77,6 @@ La función `HAL_Delay(ms)` es la forma más sencilla de generar pausas, pero ti
 - **¿Cómo funciona?**: El procesador entra en un bucle cerrado comparando el tiempo actual con el valor del `Systick` (un contador interno del microcontrolador) hasta que transcurren los milisegundos indicados.
 - **Limitación**: Mientras el microcontrolador está ejecutando el "delay", **no puede realizar ninguna otra tarea** en el bucle principal (`while(1)`). Solo las interrupciones con mayor prioridad pueden interrumpir este tiempo.
 - **Uso recomendado**: Se debe usar solo para inicializaciones simples o aplicaciones donde no importe que el micro se "congele" momentáneamente. En aplicaciones profesionales de tiempo real, se suelen utilizar **Timers** o **Interrupciones** para manejar el tiempo sin bloquear el sistema.
+
+---
+*Notas sobre la clásica primera práctica de programación adaptada a los sistemas embebidos*

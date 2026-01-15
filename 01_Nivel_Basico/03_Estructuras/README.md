@@ -34,3 +34,6 @@ typedef struct {
     uint8_t  estado;      // 1 byte
     // Solo se añaden 2 bytes de padding al final para alinear la estructura completa
 } Estructura_Flaca_t;
+```
+---
+*Notas sobre Estructuras de datos y su buena aplicacion en los sistemas embebidos*

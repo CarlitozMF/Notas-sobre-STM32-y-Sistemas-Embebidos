@@ -69,3 +69,6 @@ void Debug_Log(const char *msg) {
     HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
 }
 ```
+
+---
+*Notas sobre las variables usadas en el desarrollo de aplicaciones orientadas a los sistemas embebidos*
