@@ -43,6 +43,7 @@ registro &= ~BIT_ERROR;
 
 // Preparar dirección I2C para lectura
 uint8_t read_addr = (DEVICE_ADDR << 1) | 0x01;
+```
 
 # 🔍 Visualización en Hexadecimal
 
