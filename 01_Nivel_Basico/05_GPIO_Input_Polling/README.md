@@ -41,9 +41,9 @@ if (HAL_GPIO_ReadPin(GPIOC, USER_Btn_Pin) == GPIO_PIN_SET)
 
 ## ⚠️ Consideraciones Técnicas
 
-    Resistencias Pull-Up / Pull-Down: Son necesarias para evitar que el pin quede en un "estado flotante" cuando el botón no está presionado. La Nucleo-F439ZI ya incluye estas resistencias en su diseño para el botón azul.
+- Resistencias Pull-Up / Pull-Down: Son necesarias para evitar que el pin quede en un "estado flotante" cuando el botón no está presionado. La Nucleo-F439ZI ya incluye estas resistencias en su diseño para el botón azul.
 
-    Limitación del Polling: Esta técnica consume ciclos de CPU constantemente. Si el while(1) tuviera procesos muy largos, podríamos "perdernos" el momento exacto en que el usuario presiona el botón. (Esto se soluciona en niveles avanzados mediante Interrupciones).
+- Limitación del Polling: Esta técnica consume ciclos de CPU constantemente. Si el while(1) tuviera procesos muy largos, podríamos "perdernos" el momento exacto en que el usuario presiona el botón. (Esto se soluciona en niveles avanzados mediante Interrupciones).
 
 ---
 *Notas sobre interfaces de usuario y control de entradas para STM32.*
