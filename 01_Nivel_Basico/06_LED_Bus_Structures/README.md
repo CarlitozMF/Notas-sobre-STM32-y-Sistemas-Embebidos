@@ -39,7 +39,7 @@ $$\text{Cantidad de elementos} = \frac{\text{sizeof(arreglo completo)}}{\text{si
 
 En nuestro ejemplo:
 
-#define LED_COUNT (sizeof(configuracion_leds) / sizeof(configuracion_leds[0]))
+**#define LED_COUNT (sizeof(configuracion_leds) / sizeof(configuracion_leds[0]))**
 
 Al usar esta técnica en el archivo de configuración, logramos un código escalable:
 
@@ -61,7 +61,7 @@ for (int i = 0; i < miBarra.count; i++) {
     HAL_GPIO_WritePin(miBarra.leds[i].port, miBarra.leds[i].pin, GPIO_PIN_RESET);
 }
 ```
-### 🛠️ Hardware Setup
+## 🛠️ Hardware Setup
 
 - Microcontrolador: STM32F439ZI (Nucleo-144).
 
@@ -71,7 +71,7 @@ for (int i = 0; i < miBarra.count; i++) {
 
 - Configuración: Pines en modo Output, Push-Pull, No pull-up/pull-down.
 
-### 🔍 Por qué este enfoque es Profesional
+## 🔍 Por qué este enfoque es Profesional
 
 - Escalabilidad: Si cambias un LED de puerto, solo editas la tabla de configuración. La lógica del main() no se toca.
 
