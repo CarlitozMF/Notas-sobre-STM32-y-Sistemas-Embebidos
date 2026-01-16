@@ -33,8 +33,8 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **06_LED_Bus_Structures** *Estructuras, Bucles y Automatización*
 
 ### ⚙️ 02_Nivel Intermedio (El poder de los Periféricos: Timers, UART, Interrupciones, ETC) -PROXIMAMENTE-
-* **01_EXTI_Interrupciones:** Manejo de interrupciones externas.
-* **02_Timers:** Control de tiempos y señales analógicas simuladas.
+* **01_EXTI_Interrupciones:** Manejo de interrupciones externas. (PROX.)
+* **02_Timers:** Control de tiempos y señales analógicas simuladas. (PROX.)
 
 ### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento: DMA, RTOS, Low Power, ETC) -PROXIMAMENTE-
 
