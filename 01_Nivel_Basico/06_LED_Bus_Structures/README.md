@@ -33,9 +33,8 @@ Gracias a este diseño, si cambias un LED del puerto `GPIOD` al `GPIOA`, **no ne
 
 ### 📏 Automatización con sizeof
 
-En C, sizeof(arreglo) devuelve el tamaño total en bytes. Como cada elemento de nuestra estructura GPIO_Config_t ocupa varios bytes (debido al puntero del puerto y al entero del pin), no podemos usar ese valor directamente.
+En C, sizeof(arreglo) devuelve el tamaño total en bytes. Como cada elemento de nuestra estructura GPIO_Config_t ocupa varios bytes (debido al puntero del puerto y al entero del pin), no podemos usar ese valor directamente. La fórmula maestra:
 
-La fórmula maestra:
 $\text{Cantidad de elementos} = \frac{\text{sizeof(arreglo completo)}}{\text{sizeof(un solo elemento)}}$
 
 En nuestro ejemplo:
