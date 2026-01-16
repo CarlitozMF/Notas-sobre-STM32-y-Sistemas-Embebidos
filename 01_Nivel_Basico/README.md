@@ -12,10 +12,10 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 ### 🏗️ 01_Nivel Básico
 1. **[01_Hola_Mundo_GPIO](./01_Hola_Mundo_GPIO):** Hola Mundo visual controlando los LEDs de usuario.
 2. **[02_Tipos_De_Variables](./02_Tipo_De_Variables):** Tipos de datos y gestión de memoria.
-3. **[03_Estructuras](./03_Estructuras):** Estructuras - Optimización de Memoria RAM
-4. **[04_Bitwise_Logic](./04_Bitwise_Logic):** 04 - Lógica de Bits (Bitwise) y Aplicación
-5. **[05_GPIO_Input_Polling](./05_GPIO_Input_Polling):** 05 - Entradas Digitales y el Fenómeno del Rebote (Bounce)
-6. **[06_LED_Bus_Structures](./06_LED_Bus_Structures):** 06 - Estructuras, Bucles y Automatización 🚀
+3. **[03_Estructuras](./03_Estructuras):** Estructuras - Optimización de Memoria RAM.
+4. **[04_Bitwise_Logic](./04_Bitwise_Logic):** 04 - Lógica de Bits (Bitwise) y Aplicación.
+5. **[05_GPIO_Input_Polling](./05_GPIO_Input_Polling):** 05 - Entradas Digitales y el Fenómeno del Rebote (Bounce).
+6. **[06_LED_Bus_Structures](./06_LED_Bus_Structures):** 06 - Estructuras, Bucles y Automatización.
 
 ---
 *Aprendiendo paso a paso el control del silicio.*
