@@ -30,6 +30,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **03_Estructuras:** *Estructuras - Optimización de Memoria RAM*
 * **04_Bitwise_Logic** *Lógica de Bits*
 * **05_GPIO_Input_Polling** *Entradas Digitales*
+* **06_LED_Bus_Structures** *Estructuras, Bucles y Automatización*
 
 ### ⚙️ 02_Nivel Intermedio (El poder de los Periféricos: Timers, UART, Interrupciones, ETC) -PROXIMAMENTE-
 * **01_EXTI_Interrupciones:** Manejo de interrupciones externas.

@@ -15,5 +15,7 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 3. **[03_Estructuras](./03_Estructuras):** Estructuras - Optimización de Memoria RAM
 4. **[04_Bitwise_Logic](./04_Bitwise_Logic):** 04 - Lógica de Bits (Bitwise) y Aplicación
 5. **[05_GPIO_Input_Polling](./05_GPIO_Input_Polling):** 05 - Entradas Digitales y el Fenómeno del Rebote (Bounce)
+6. **[06_LED_Bus_Structures](./06_LED_Bus_Structures):** 06 - Estructuras, Bucles y Automatización 🚀
+
 ---
 *Aprendiendo paso a paso el control del silicio.*
