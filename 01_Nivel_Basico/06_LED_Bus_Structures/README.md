@@ -67,7 +67,7 @@ for (int i = 0; i < miBarra.count; i++) {
 
 - Periféricos: 8 LEDs externos.
 
-- Conexión: Los LEDs están distribuidos en diferentes puertos (ej. GPIOD, GPIOA, GPIOG) para demostrar la versatilidad del mapeo genérico.
+- Conexión: Los LEDs están distribuidos en diferentes puertos (ej. GPIOA, GPIOB, GPIOD, GPIOF) para demostrar la versatilidad del mapeo genérico.
 
 - Configuración: Pines en modo Output, Push-Pull, No pull-up/pull-down.
 
@@ -80,4 +80,4 @@ for (int i = 0; i < miBarra.count; i++) {
 - Mantenimiento: El uso de sizeof asegura que nunca habrá un desbordamiento de índice en el bucle si cambia el número de LEDs.
 
 ---
-*Este ejemplo cierra la sección de Fundamentos de C para Embebidos, preparando el camino para el manejo de periféricos complejos en el Nivel Intermedio.*
+*Este ejemplo aplica el buen uso de las Estructuras de Datos para generar una manipulacion generica de puertos de la placa*
