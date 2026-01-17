@@ -1,4 +1,4 @@
-# 08_01: Contador Pro UP/DOWN con Gestión de Errores y Reset Dual 🔄
+# EI_1: Contador Pro UP/DOWN con Gestión de Errores y Reset Dual 🔄
 
 Este es el primer proyecto integrador del **Nivel Básico**. Representa la consolidación de todos los conceptos aprendidos anteriormente: manejo de GPIO, estructuras de datos, lógica de bits, control de rebotes (debounce) y diseño de interfaz de usuario (UX).
 
