@@ -49,3 +49,6 @@ void Display_Blink(uint8_t numero, uint8_t repeticiones) {
         HAL_Delay(150);
     }
 }
+```
+---
+*Este proyecto demuestra que incluso con periféricos sencillos como botones y LEDs, la complejidad reside en el manejo del tiempo y en la previsión de las acciones del usuario. Es el cierre ideal para los fundamentos de entrada/salida digital.*

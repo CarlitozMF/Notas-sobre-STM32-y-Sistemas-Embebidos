@@ -19,6 +19,8 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 7. **[07_Display_7_segmentos](./07_Display_7_Segmentos):** 07 - Control de Display de 7 Segmentos.
 
 **[Proyectos_Integradores](./Proyectos_Integradores):** Carpeta de Interesantes Proyectos de Integración.
+EI1. **[01.Contador_Up-Down_7Seg](./Proyectos_Integradores/01.Contador_Up_Down_7Seg):** EI1 - Contador U/D con Display 7 Segmentos
+EI2. **[02.Semaforo_Smart](./Proyectos_Integradores/02.Semaforo_Smart):** EI2 - Semaforo Inteligente y MEF
 
 ---
 *Aprendiendo paso a paso el control del silicio.*
