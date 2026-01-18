@@ -1,4 +1,4 @@
-# 📂 Directorio: Proyectos Integradores (Nivel Básico)
+# 📂 Proyectos Integradores (Nivel Básico)
 
 Este directorio contiene los proyectos finales del **Nivel Básico** de aprendizaje en sistemas embebidos con STM32. El objetivo de esta sección es consolidar los conocimientos atómicos (GPIO, Bits, Delays) en aplicaciones reales y funcionales.
 
@@ -14,9 +14,9 @@ Cada proyecto en esta carpeta sigue tres principios fundamentales:
 
 | Proyecto | Descripción | Conceptos Clave |
 | :--- | :--- | :--- |
-| **08_01_Contador_Pro** | Contador UP/DOWN (0-9) con detección de límites. | Active-Low, Ventana de Reset, Feedback Visual. |
-| **08_02_Semaforo_MEF** | Sistema de tráfico automático con transición de seguridad. | Máquina de Estados Finitos (MEF), Sincronización. |
-| **08_03_Simon_Says** | Juego de memoria con 4 botones y 4 LEDs. | Arreglos, Generación Aleatoria, Lógica de Juego. |
+| **01_Contador_Pro** | Contador UP/DOWN (0-9) con detección de límites. | Active-Low, Ventana de Reset, Feedback Visual. |
+| **02_Semaforo_MEF** | Sistema de tráfico automático con transición de seguridad. | Máquina de Estados Finitos (MEF), Sincronización. |
+| **03_Simon_Dice** | Juego de memoria con 4 botones y 4 LEDs. | Arreglos, Generación Aleatoria, Lógica de Juego. |
 
 ---
 
