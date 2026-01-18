@@ -17,6 +17,7 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 5. **[05_GPIO_Input_Polling](./05_GPIO_Input_Polling):** 05 - Entradas Digitales y el Fenómeno del Rebote (Bounce).
 6. **[06_LED_Bus_Structures](./06_LED_Bus_Structures):** 06 - Estructuras, Bucles y Automatización.
 7. **[07_Display_7_segmentos](./07_Display_7_Segmentos):** 07 - Control de Display de 7 Segmentos.
+8. **[08_Multiplex_7Seg](./08_Multiplex_7Seg):** 08 - Nociones de Multiplexación de Displays de 7 Segmentos
 
 **[Proyectos_Integradores](./Proyectos_Integradores):** Carpeta de Interesantes Proyectos de Integración.
 1. **[01.Contador_Up-Down_7Seg](./Proyectos_Integradores/01.Contador_Up_Down_7Seg):** EI1 - Contador U/D con Display 7 Segmentos

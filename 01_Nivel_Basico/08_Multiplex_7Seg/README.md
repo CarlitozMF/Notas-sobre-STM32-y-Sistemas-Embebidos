@@ -1,4 +1,4 @@
-# 08_Multiplexacion_Manual: Control de 3 Dígitos con POV 🔢
+# 08_Multiplex_7Seg: Control de 3 Dígitos con POV 🔢
 
 Este proyecto demuestra la técnica de **Persistencia de Visión (POV)** para controlar múltiples displays de 7 segmentos compartiendo un único bus de datos, optimizando el uso de pines GPIO en la placa **Nucleo-F439ZI**.
 

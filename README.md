@@ -41,6 +41,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **05_GPIO_Input_Polling:** *Lectura de entradas digitales mediante escaneo.*
 * **06_LED_Bus_Structures:** *Automatización de secuencias de salida.*
 * **07_Display_7_Segmentos:** *Control de display numérico.*
+* **08_Multiplex_&Seg:** *Nociones Básicas de Multiplexación*
 
 #### **[Proyectos Integradores](./01_Nivel_Basico/Proyectos_Integradores/)**
 * **01. Contador_Up_Down_7Seg:** *Uso de Active-Low, Debounce y ventana de Reset.*
