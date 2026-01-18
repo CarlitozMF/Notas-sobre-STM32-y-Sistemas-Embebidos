@@ -1,4 +1,4 @@
-# 08_02: Semáforo Automático con Máquina de Estados y Temporizador Visual 🚦
+# EI_2: Semáforo Automático con Máquina de Estados y Temporizador Visual 🚦
 
 Este proyecto integrador del **Nivel Básico** demuestra el control de un sistema secuencial complejo mediante una arquitectura de software robusta. Se coordina la iluminación vial con un contador regresivo de seguridad para peatones.
 
