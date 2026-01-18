@@ -24,28 +24,42 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ## 📂 Estructura del Aprendizaje
 
-### 🏗️ 01_Nivel Basico (El lenguaje C aplicado a registros y GPIO.) -En Curso 17/01/2026-
+### 📘 [Documentación y Guías](./Documentacion/)
+*Fundamentos técnicos y buenas prácticas antes de programar:*
+* **Guía de Supervivencia:** *Particularidades del IDE y regeneración de código.*
+* **Arquitectura HAL:** *Estructura de funciones, Handles y Timeouts.*
+* **Diccionario de Funciones:** *Sintaxis de WritePin, ReadPin y Delay.*
+* **Troubleshooting:** *Solución de errores comunes y Debugging.*
+
+
+
+### 🏗️ 01_Nivel Básico (GPIO & Lógica de Control) - ✅ COMPLETADO 18/01/2026 -
 * **01_Hola_Mundo:** *Hola Mundo visual controlando los LEDs de la placa.*
 * **02_Tipos_De_Variables:** *Gestión de memoria y tipos de datos de ancho fijo (`stdint.h`).*
-* **03_Estructuras:** *Estructuras - Optimización de Memoria RAM*
-* **04_Bitwise_Logic** *Lógica de Bits*
-* **05_GPIO_Input_Polling** *Entradas Digitales*
-* **06_LED_Bus_Structures** *Estructuras, Bucles y Automatización*
-* **07_Display_7_Segmentos** *Control de Display de 7 Segmentos*
+* **03_Estructuras:** *Optimización de memoria RAM mediante structs.*
+* **04_Bitwise_Logic:** *Manipulación de registros con lógica de bits.*
+* **05_GPIO_Input_Polling:** *Lectura de entradas digitales mediante escaneo.*
+* **06_LED_Bus_Structures:** *Automatización de secuencias de salida.*
+* **07_Display_7_Segmentos:** *Control de display numérico.*
 
-#### **Proyectos Integradores**
-* **01.Contador_Up_Down_7Seg** *Contador con Display 7 Segmentos y Botones*
-* **02.Semaforo_Smart** *Semaforo Automático con Display 7 Segmentos y Aplicacion de MEF*
-* **03.Simon_dice** *Un juego básico pero de nivel experto -Simón Dice-*
+#### **[Proyectos Integradores](./Proyectos_Integradores/)**
+* **01. Contador_Up_Down_7Seg:** *Uso de Active-Low, Debounce y ventana de Reset.*
+* **02. Semaforo_Smart:** *Aplicación de Máquina de Estados Finitos (MEF).*
+* **03. Simon_Dice:** *Gestión de memoria, arreglos y lógica de juego física.*
 
-### ⚙️ 02_Nivel Intermedio (El poder de los Periféricos: Timers, UART, Interrupciones, ETC) -PROXIMAMENTE-
-* **01_EXTI_Interrupciones:** Manejo de interrupciones externas. (PROX.)
-* **02_Timers:** Control de tiempos y señales analógicas simuladas. (PROX.)
 
-### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento: DMA, RTOS, Low Power, ETC) -PROXIMAMENTE-
+
+### ⚙️ 02_Nivel Intermedio (Periféricos y Eficiencia) - 🚀 EN CURSO -
+* **01_EXTI_Interrupciones:** *Manejo de interrupciones externas para respuesta inmediata.*
+* **02_Timers:** *Control de tiempos sin bloqueos y generación de señales PWM.*
+* **03_ADC:** *Conversión analógica a digital para sensores.*
+
+### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento) - PROXIMAMENTE -
+* **DMA & RTOS:** *Gestión de tareas paralelas y transferencia de datos eficiente.*
+* **Low Power:** *Optimización de consumo energético.*
 
 ---
 
 <div align="center">
-  <p><i>Notas creadas durante mi proceso de estudio y experimentación.</i></p>
+  <p><i>Notas creadas durante mi proceso de estudio y experimentación en San Miguel de Tucumán.</i></p>
 </div>
