@@ -36,6 +36,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 #### **Proyectos Integradores**
 * **01.Contador_Up_Down_7Seg** *Contador con Display 7 Segmentos y Botones*
 * **02.Semaforo_Smart** *Semaforo Automático con Display 7 Segmentos y Aplicacion de MEF*
+* **03.Simon_dice** *Un juego básico pero de nivel experto -Simón Dice-
 
 ### ⚙️ 02_Nivel Intermedio (El poder de los Periféricos: Timers, UART, Interrupciones, ETC) -PROXIMAMENTE-
 * **01_EXTI_Interrupciones:** Manejo de interrupciones externas. (PROX.)
