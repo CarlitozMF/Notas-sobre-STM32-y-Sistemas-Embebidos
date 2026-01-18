@@ -42,7 +42,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **06_LED_Bus_Structures:** *Automatización de secuencias de salida.*
 * **07_Display_7_Segmentos:** *Control de display numérico.*
 
-#### **[Proyectos Integradores](./Proyectos_Integradores/)**
+#### **[Proyectos Integradores](./01_Nivel_Basico/Proyectos_Integradores/)**
 * **01. Contador_Up_Down_7Seg:** *Uso de Active-Low, Debounce y ventana de Reset.*
 * **02. Semaforo_Smart:** *Aplicación de Máquina de Estados Finitos (MEF).*
 * **03. Simon_Dice:** *Gestión de memoria, arreglos y lógica de juego física.*
