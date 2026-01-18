@@ -14,8 +14,8 @@ Cada proyecto en esta carpeta sigue tres principios fundamentales:
 
 | Proyecto | Descripción | Conceptos Clave |
 | :--- | :--- | :--- |
-| **01_Contador_Pro** | Contador UP/DOWN (0-9) con detección de límites. | Active-Low, Ventana de Reset, Feedback Visual. |
-| **02_Semaforo_MEF** | Sistema de tráfico automático con transición de seguridad. | Máquina de Estados Finitos (MEF), Sincronización. |
+| **01_Contador_Up_Down_7Seg** | Contador UP/DOWN (0-9) con detección de límites. | Active-Low, Ventana de Reset, Feedback Visual. |
+| **02_Semaforo_Smart** | Sistema de tráfico automático con transición de seguridad. | Máquina de Estados Finitos (MEF), Sincronización. |
 | **03_Simon_Dice** | Juego de memoria con 4 botones y 4 LEDs. | Arreglos, Generación Aleatoria, Lógica de Juego. |
 
 ---
