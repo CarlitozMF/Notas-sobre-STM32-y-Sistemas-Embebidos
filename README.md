@@ -33,7 +33,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **06_LED_Bus_Structures** *Estructuras, Bucles y Automatización*
 * **07_Display_7_Segmentos** *Control de Display de 7 Segmentos*
 
-* **Proyectos Integradores**
+# **Proyectos Integradores**
 * **01.Contador_Up_Down_7Seg** *Contador con Display 7 Segmentos y Botones*
 * **02.Semaforo_Smart** *Semaforo Automático con Display 7 Segmentos y Aplicacion de MEF*
 
