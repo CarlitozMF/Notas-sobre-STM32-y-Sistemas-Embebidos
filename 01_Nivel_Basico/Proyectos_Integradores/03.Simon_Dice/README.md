@@ -14,8 +14,6 @@ Este es el proyecto final del **Nivel Básico**. Representa la integración tota
 3. **Validación:** El sistema entra en una **espera activa** de botones. Cada pulsación se compara inmediatamente con el valor guardado en memoria.
 4. **Condición de Victoria:** Al alcanzar el `NIVEL_VICTORIA` (definido en 10), el sistema activa una secuencia especial de luces antes de reiniciar.
 
-
-
 ## 🛠️ Desafíos Técnicos Superados
 - **Antirrepetidor:** Se implementó una lógica de bloqueo para asegurar que una pulsación larga no sea contada como múltiples entradas.
 - **Debounce Físico:** Gestión del ruido mecánico de los pulsadores mediante retardos estratégicos.
