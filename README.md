@@ -50,7 +50,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 
 
-### ⚙️ 02_Nivel Intermedio (Periféricos y Eficiencia) - 🚀 EN CURSO -
+### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/)- 🚀 EN CURSO -
 * **01_EXTI_Interrupciones:** *Manejo de interrupciones externas para respuesta inmediata.*
 * **02_Timers:** *Control de tiempos sin bloqueos y generación de señales PWM.*
 * **03_ADC:** *Conversión analógica a digital para sensores.*
