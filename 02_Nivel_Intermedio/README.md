@@ -34,21 +34,8 @@ Estableceremos diálogo con otros dispositivos y sensores externos.
 ---
 
 ## 🛠️ Roadmap de Proyectos
+1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Contador de 3 Dígitos con Control EXTI.
 
-| Proyecto | Descripción | Periféricos Clave |
-| :--- | :--- | :--- |
-| **01_EXTI_Reset** | Reset de contador de 3 dígitos mediante interrupción externa. | EXTI, NVIC |
-| **02_Timer_Mux** | Automatización del barrido de display 7-segmentos (Display Autónomo). | TIM6/TIM7, Callbacks |
-| **03_LCD_Driver** | Desarrollo de un driver propio para LCD 16x2 en modo 4-bits. | GPIO, Modularización |
-| **04_ADC_Sensor** | Lectura de sensores analógicos y visualización en LCD. | ADC1, Timers |
-| **05_UART_Control** | Control de hardware mediante comandos desde la PC. | UART (IT Mode) |
-
----
-
-## 📂 Organización de Archivos (Drivers)
-En este nivel, empezamos a separar la lógica del hardware creando nuestros propios archivos de cabecera y código:
-- `LCD16x2.h`: Definiciones de comandos y pines.
-- `LCD16x2.c`: Implementación de funciones (Init, Print, Clear).
 
 ---
 *Notas creadas durante mi proceso de estudio y experimentación en San Miguel de Tucumán.*
