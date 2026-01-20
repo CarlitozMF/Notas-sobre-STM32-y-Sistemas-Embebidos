@@ -19,17 +19,24 @@ Este proyecto implementa un contador digital de 0 a 999 sobre tres displays de 7
 - Botones Externos: Conectados a GND con configuración Pull-Up interna.
     1. BTN_RESET (PB10) - Falling Edge.
     2. BTN_PAUSE (PB11) - Falling Edge.
-    
+
 ## 📌 Asignación de Pines (Pinout)
 
 | Componente | Pin STM32 | Etiqueta (User Label) | Modo GPIO |
 | :--- | :--- | :--- | :--- |
-| Segmentos A-G | PA0 - PA6 | `SEG_A` ... `SEG_G` | Output Push-Pull |
-| Habilitador 1 | PB0 | `EN1` | Output Push-Pull |
-| Habilitador 2 | PB1 | `EN2` | Output Push-Pull |
-| Habilitador 3 | PB2 | `EN3` | Output Push-Pull |
-| Botón Reset | PB10 | `BTN_RESET` | EXTI (Falling Edge) |
-| Botón Pause | PB11 | `BTN_PAUSE` | EXTI (Falling Edge) |
+| Segmento A | PB8 | `SEG_A` | Output Push-Pull |
+| Segmento B | PB9 | `SEG_B` | Output Push-Pull |
+| Segmento C | PA5| `SEG_C` | Output Push-Pull |
+| Segmento D | PA6 | `SEG_D` | Output Push-Pull |
+| Segmento E | PA7 | `SEG_E` | Output Push-Pull |
+| Segmento F | PD14 | `SEG_F` | Output Push-Pull |
+| Segmento G | PD15 | `SEG_G` | Output Push-Pull |
+| Habilitador 1 | PC8 | `EN1` | Output Push-Pull |
+| Habilitador 2 | PC9 | `EN2` | Output Push-Pull |
+| Habilitador 3 | PC10 | `EN3` | Output Push-Pull |
+| Botón Reset | PB10 | `btn_rst` | EXTI (Falling Edge) |
+| Botón Pause | PB11 | `btn_pp` | EXTI (Falling Edge) |
+
 # 🧠 Lógica de Software
 
 El sistema utiliza el NVIC para priorizar las acciones de los botones sobre el bucle principal. Gracias a los capacitores físicos, el código de la ISR (Interrupt Service Routine) permanece limpio y sin necesidad de delays por software.
