@@ -34,6 +34,7 @@ Este proyecto implementa un contador digital de 0 a 999 sobre tres displays de 7
 | Habilitador 1 | PC8 | `EN1` | Output Push-Pull |
 | Habilitador 2 | PC9 | `EN2` | Output Push-Pull |
 | Habilitador 3 | PC10 | `EN3` | Output Push-Pull |
+| Led Usuario | PF13 | `usr_led` | Output Push-Pull |
 | Botón Reset | PB10 | `btn_rst` | EXTI (Falling Edge) |
 | Botón Pause | PB11 | `btn_pp` | EXTI (Falling Edge) |
 
