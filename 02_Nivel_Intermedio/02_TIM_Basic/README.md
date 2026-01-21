@@ -72,3 +72,6 @@ while (1) {
 - Independencia: El LED mantiene su ritmo perfecto aunque el while(1) realice comunicaciones pesadas o cálculos.
 - Relación Toggle/Periodo: El periodo total de la señal del LED (500 ms) es el doble del tiempo de interrupción del Timer (250 ms), ya que se requieren dos eventos de Update para completar un ciclo (Encendido + Apagado).
 - Importancia de la Medición: El analizador lógico es la herramienta definitiva para validar que el Clock Tree y los registros PSC/ARR están correctamente sincronizados.
+
+---
+*Este ejemplo marca un antes y un después en el manejo de periféricos: el paso del polling bloqueante al procesamiento asíncrono. Entender que el hardware puede trabajar de forma autónoma (mientras el código principal atiende otras tareas) es la base para desarrollar sistemas de control embebidos reales.*

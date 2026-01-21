@@ -52,8 +52,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/)- 🚀 EN CURSO -
 * **01_EXTI_Pulsadores:** *Manejo de interrupciones externas para respuesta inmediata.*
-* **02_Timers:** *Control de tiempos sin bloqueos y generación de señales PWM.*
-* **03_ADC:** *Conversión analógica a digital para sensores.*
+* **02_TIM_Basic:** *Introduccion al manejo de base de Tiempos con Timers.*
 
 ### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento) - PROXIMAMENTE -
 * **DMA & RTOS:** *Gestión de tareas paralelas y transferencia de datos eficiente.*

@@ -13,15 +13,11 @@ Es la capacidad del microcontrolador de "pausar" su tarea actual para atender un
 * **Concepto:** Adiós al Polling. El hardware nos avisa cuando ocurre un evento.
 * **Aplicaciones:** Botones de emergencia, sensores de velocidad, detección de flancos.
 
-
-
 ### 2. Temporizadores (Timers) ⏱️
 El "corazón" del sistema. Aprenderemos a gestionar el tiempo sin bloquear la ejecución del código.
 * **Base de Tiempo:** Generar interrupciones cíclicas (ej: cada 1ms).
 * **PWM (Pulse Width Modulation):** Control de intensidad lumínica y servomotores.
 * **Encoder Mode:** Lectura de sensores de posición para robótica.
-
-
 
 ### 3. Protocolos de Comunicación (I2C, SPI, UART) 📬
 Estableceremos diálogo con otros dispositivos y sensores externos.
@@ -35,7 +31,7 @@ Estableceremos diálogo con otros dispositivos y sensores externos.
 
 ## 🛠️ Roadmap de Proyectos
 1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Contador de 3 Dígitos con Control EXTI.
-
+2. **[02_TIM_Basic](./02_TIM_Basic):** Introducción a la gestion de bases tiempo con Timers.
 
 ---
 *Notas creadas durante mi proceso de estudio y experimentación en San Miguel de Tucumán.*
