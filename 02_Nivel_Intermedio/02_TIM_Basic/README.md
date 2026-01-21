@@ -1,51 +1,55 @@
 # 02_TIM_Basic: Gestión de Tiempo y Base de Tiempo con TIM1 ⏱️
 
-Este proyecto documenta el uso de **Timers** de hardware para crear bases de tiempo precisas en la **Nucleo-F439ZI**. El objetivo es demostrar cómo el hardware puede gestionar tareas críticas (como el parpadeo de un LED) de forma asíncrona, liberando al procesador para realizar otras tareas en el bucle principal sin usar funciones bloqueantes como `HAL_Delay()`.
+Este proyecto documenta el uso de **Timers** de hardware para crear bases de tiempo precisas en la **Nucleo-F439ZI**. El objetivo es demostrar cómo el hardware gestiona tareas críticas de forma asíncrona, liberando al procesador para realizar otras tareas en el bucle principal sin usar funciones bloqueantes.
 
-## 🧮 Configuración del Reloj (Clock Tree)
+## 🚌 Arquitectura de Buses y Timers (APB1 vs APB2)
 
-El primer paso crítico es entender la frecuencia de entrada del periférico. Según la configuración de reloj de nuestra placa, el bus **APB2** corre a 90 MHz. Sin embargo, debido a la arquitectura de la familia STM32F4, si el prescaler del bus APB es distinto de 1, la frecuencia del Timer se multiplica automáticamente por 2.
+En la arquitectura STM32F4, los Timers se distribuyen en dos buses periféricos con distintas capacidades de velocidad. Es vital identificar en qué bus se encuentra el Timer para realizar los cálculos de tiempo correctos.
 
-Por lo tanto, el **APB2 Timer clocks** tiene una frecuencia efectiva de **180 MHz**.
+| Bus | Frecuencia Máxima (TIM) | Timers Manejados | Notas |
+| :--- | :--- | :--- | :--- |
+| **APB1** | **90 MHz** | TIM2, TIM3, TIM4, TIM5, TIM6, TIM7, TIM12, TIM13, TIM14 | Bus de periféricos de baja velocidad. |
+| **APB2** | **180 MHz** | **TIM1**, TIM8, TIM9, TIM10, TIM11 | Bus de alta velocidad (Advanced Timers). |
 
-> **Referencia del Clock Tree:**
+> **Regla de Hardware:** Si el prescaler del bus APB es distinto de 1, la frecuencia del reloj del Timer se multiplica automáticamente por 2 respecto a la frecuencia del bus periférico (PCLK).
+
+## 🧮 Matemática del Timer: Fórmulas de Cálculo
+
+Para este ejemplo usamos el **TIM1**, que cuelga del bus **APB2**. Según nuestro **Clock Tree**, la frecuencia de entrada ($f_{clk}$) es de **180 MHz**.
+
+> **Referencia del Clock Configuration:**
 > ![Clock Configuration](./assets/02_TIM_Basic_CLKConf.png)
-> *Se observa que el TIM1 recibe 180 MHz para su lógica de conteo.*
-
-## 📏 Matemática del Timer y Fórmulas
-
-Para obtener un parpadeo preciso, aplicamos las siguientes fórmulas de hardware:
 
 ### 1. Frecuencia de Conteo ($f_{CNT}$)
-Es la velocidad a la que incrementa el contador interno tras pasar por el Prescaler.
+Es la velocidad a la que incrementa el contador interno tras pasar por el Prescaler (PSC).
 $$f_{CNT} = \frac{f_{clk}}{(PSC + 1)}$$
 
 ### 2. Tiempo de Interrupción ($T_{Update}$)
-Es el intervalo en el que el Timer llega al valor de Auto-Reload (ARR) y dispara la interrupción (Update Event).
+Es el intervalo en el que el Timer llega al valor de Auto-Reload (ARR) y dispara la interrupción.
 $$T_{Update} = \frac{(ARR + 1)}{f_{CNT}}$$
 
-### 3. Cálculo aplicado en este ejemplo:
-Para los valores configurados de $PSC = 8999$ y $ARR = 4999$:
+### 3. Aplicación real:
+Configuramos $PSC = 8999$ y $ARR = 4999$:
 * $f_{CNT} = \frac{180.000.000}{9000} = 20.000 \text{ Hz} (20 \text{ kHz})$
 * $T_{Update} = \frac{5000}{20.000} = \mathbf{0.25 \text{ s} (250 \text{ ms})}$
 
 ## 🔬 Validación con Analizador Lógico
 
-Para verificar que el firmware cumple con los cálculos teóricos, conectamos un analizador lógico al pin **PF13** (`usr_led`). 
+Conectamos un analizador lógico al pin **PF13** (`usr_led`) para verificar los tiempos calculados.
 
 > **Captura del Analizador Lógico:**
-> ![Analizador Lógico](Captura_Analizador_Logico.png)
-> *La medición confirma que el LED permanece en alto 250 ms y en bajo 250 ms (Duty Cycle 50%), resultando en una frecuencia de oscilación de **2 Hz**.*
+> ![Analizador Lógico](./assets/02_TIM_Basic_Logic_Analyzer.png)
+> *La medición confirma un tiempo en alto de 250 ms y un tiempo en bajo de 250 ms, validando la configuración de 180 MHz del APB2.*
 
 ## 💻 Lógica de Software Implementada
 
 ### 1. Interrupción de Hardware (Hard Real-Time)
-El parpadeo del LED se gestiona mediante la interrupción de **Update** del TIM1. Esta tarea es prioritaria y ocurre en "background", garantizando que el tiempo de conmutación sea exacto.
+El LED conmuta en el callback del TIM1. Esta tarea ocurre en "background" con prioridad de interrupción.
 
 ```c
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM1) {
-        // El estado cambia cada 250ms (T_Update)
+        // Conmuta el estado cada 250ms
         HAL_GPIO_TogglePin(usr_led_GPIO_Port, usr_led_Pin); 
     }
 }
