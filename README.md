@@ -44,6 +44,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **08_Multiplex_7Seg:** *Nociones Básicas de Multiplexación.*
 * **09_Intro_MEF:** *Introducción y aplicación de MEF simples.*
 * **10_API_Drivers:** *Crecion de Drivers Personalizados para gestión de tareas y abstracción de hardware.*
+* **11_Debounce_Avanzado:** *Driver para eliminar debounce con MEF y Gestion de Tiempo No Bloqueante.*
 
 #### **[Proyectos Integradores](./01_Nivel_Basico/Proyectos_Integradores/)**
 * **01. Contador_Up_Down_7Seg:** *Uso de Active-Low, Debounce y ventana de Reset.*
