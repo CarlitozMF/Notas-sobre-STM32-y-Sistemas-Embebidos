@@ -50,7 +50,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **01. Contador_Up_Down_7Seg:** *Uso de Active-Low, Debounce y ventana de Reset.*
 * **02. Semaforo_Smart:** *Aplicación de Máquina de Estados Finitos (MEF).*
 * **03. Simon_Dice:** *Gestión de memoria, arreglos y lógica de juego física.*
-* **04.Integracion_Apis:** *Integración de arquitectura de software, modularidad y máquinas de estados*
+* **04.Integracion_Apis:** *Integración de arquitectura de software, modularidad y máquinas de estados.*
 
 
 
