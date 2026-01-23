@@ -49,8 +49,6 @@ Capacidad para diseñar APIs que manejan colecciones de hardware. El uso de punt
 ### 7. Drivers Reentrantes y Modulares
 Creación de librerías propias (`API_debounce`, `API_delay`) que son independientes del proyecto. Estos drivers son "cajas negras" que pueden copiarse y pegarse en cualquier nuevo desarrollo de STM32.
 
-### 8. Diagnóstico por Telemetría (UART)
-Uso de la terminal serie no solo para mensajes, sino como una herramienta de rastreo de estados de la MEF, permitiendo "ver" qué está pensando el microcontrolador en cada microsegundo.
 ---
 
 ## 🔧 Requisitos del Laboratorio
