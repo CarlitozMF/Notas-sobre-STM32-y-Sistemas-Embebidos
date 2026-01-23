@@ -26,3 +26,16 @@ void LED_Toggle(led_t * led) {
     if (led == NULL) return;
     HAL_GPIO_TogglePin(led->port, led->pin);
 }
+
+void LED_All_Off(led_t ledGroup[], uint8_t size) {
+    for (uint8_t i = 0; i < size; i++) {
+        // Llamamos a tu función individual para cada elemento
+        LED_Off(&ledGroup[i]);
+    }
+}
+
+void LED_ToggleAll(led_t ledGroup[], uint8_t size) {
+    for (uint8_t i = 0; i < size; i++) {
+        LED_Toggle(&ledGroup[i]);
+    }
+}

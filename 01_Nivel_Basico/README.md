@@ -23,9 +23,10 @@ Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladore
 11. **[11_Debounce_Avanzado](./11_Debounce_Avanzado):** 11 - Debounce Avanzado con MEF y Gestión de tiempo No Bloquenate.
 
 **[Proyectos_Integradores](./Proyectos_Integradores):** Carpeta de Interesantes Proyectos de Integración.
-1. **[01.Contador_Up-Down_7Seg](./Proyectos_Integradores/01.Contador_Up_Down_7Seg):** EI1 - Contador U/D con Display 7 Segmentos
-2. **[02.Semaforo_Smart](./Proyectos_Integradores/02.Semaforo_Smart):** EI2 - Semaforo Automático con MEF
-3. **[03.Simon_Dice](./Proyectos_Integradores/03.Simon_Dice):** EI3 - El Juego Perfecto (Simón Dice)
+1. **[01.Contador_Up-Down_7Seg](./Proyectos_Integradores/01.Contador_Up_Down_7Seg):** EI1 - Contador U/D con Display 7 Segmentos.
+2. **[02.Semaforo_Smart](./Proyectos_Integradores/02.Semaforo_Smart):** EI2 - Semaforo Automático con MEF.
+3. **[03.Simon_Dice](./Proyectos_Integradores/03.Simon_Dice):** EI3 - El Juego Perfecto (Simón Dice).
+4. **[04.Integracion_Apis](./Proyectos_Integradores/04.Integracion_APIs):** EI4 - Secuenciador Maestro de 6 Efectos.
 
 ---
 *Aprendiendo paso a paso el control del silicio.*

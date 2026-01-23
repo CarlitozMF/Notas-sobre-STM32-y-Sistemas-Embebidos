@@ -21,9 +21,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "API_debounce.h" // Este ya incluye a API_delay.h internamente
-#include "API_LED.h"      // Tu driver de abstracción de LEDs
+
+#include "API_debounce.h"
+#include "API_delay.h"
+#include "API_led.h"
 #include <string.h>
+#include <stdbool.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,9 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-//Usamos etiquetas para evitar hardcodear
-#define delay1 250
-#define delay2 1000
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,19 +49,35 @@
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-//-----------Definicion de Instancias--------------
 
 // Definimos los objetos LED (Abstracción Genérica)
-led_t ledRojo = {GPIOG, GPIO_PIN_9, false};
-led_t ledAmarillo = {GPIOB, GPIO_PIN_1, false};
-led_t ledVerde  = {GPIOE, GPIO_PIN_9,  false};
-led_t ledAzul  = {GPIOF, GPIO_PIN_13, false};
+
+// Definimos los LEDs como un arreglo
+led_t Leds[] = {
+		{GPIOG, GPIO_PIN_9, false}, //Rojo
+		{GPIOB, GPIO_PIN_1, false},	//Amarillo
+		{GPIOE, GPIO_PIN_9, false},	//Verde
+		{GPIOF, GPIO_PIN_13, false}	//Azul
+};
+
+// Guardamos el tamaño del grupo para que sea dinámico
+const uint8_t CANT_LEDS = sizeof(Leds) / sizeof(led_t);
 
 // Definimos el botón en PB11 (Active Low / Inverted = true)
-button_t botonExterno = {GPIOB, GPIO_PIN_11, true, false};
+button_t botonModo = {GPIOB, GPIO_PIN_11, true, false};
 
-// Definimos los objetos de retardo (No bloqueantes)
-delay_t delayLED1, delayLED2;
+/* --- Definición de Escenas --- */
+typedef enum {
+    MODO_SYNC, MODO_CARRERA, MODO_REBOTE,
+    MODO_STREAK, MODO_ALARMA, MODO_RANDOM,
+    CANT_MODOS // Truco para resetear el contador automáticamente
+} escena_t;
+
+escena_t escenaActual = MODO_SYNC;
+delay_t timerSecuencia;
+uint8_t paso = 0;
+bool direccion = true; // Para el efecto rebote
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -117,19 +135,14 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  /* Inicialización de Drivers */
+  /* Inicialización de Drivers API */
       debounceFSM_Init();
-      delayInit(&delayLED1, delay1);  // LED Verde cada 250ms
-      delayInit(&delayLED2, delay2); // LED Azul cada 1000ms
+      delayInit(&timerSecuencia, 500);
 
-      // Mensajes de inicialización del sistema
-        Debug_Log("\r\n==================================\r\n");
-        Debug_Log("SISTEMA INICIALIZADO\r\n");
-        Debug_Log("Proyecto: Debounce Avanzado\r\n");
-        Debug_Log("Placa: Nucleo-F439ZI\r\n");
-        Debug_Log("SISTEMA INICIALIZADO - NIVEL BASICO FINALIZADO\r\n");
-        Debug_Log("==================================\r\n");
-
+      Debug_Log("\r\n==================================\r\n");
+      Debug_Log("PROYECTO INTEGRADOR: SECUENCIADOR 6\r\n");
+      Debug_Log("UTN FRT - Nivel Basico Finalizado\r\n");
+      Debug_Log("==================================\r\n");
 
   /* USER CODE END 2 */
 
@@ -141,24 +154,86 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  /* 1. Tarea de Actualización del Debounce */
-	          debounceFSM_Update(&botonExterno);
+	  /* 1. Entrada con API_debounce */
+	      debounceFSM_Update(&botonModo);
+	      if (readKey(&botonModo)) {
+	          escenaActual = (escenaActual + 1) % CANT_MODOS;
+	          paso = 0; // Reset de variable auxiliar
+	          direccion = true;
+	          LED_All_Off(Leds, CANT_LEDS);
+	          // Log de cambio de modo general
+	          Debug_Log("\r\n--- CAMBIO DE MODO ---\r\n");
+	      }
 
-	          /* 2. Tarea Reactiva (Botón) */
-	          if (readKey(&botonExterno)) {
-	              // Acción inmediata al detectar pulsación confirmada
-	              LED_Toggle(&ledRojo);
-	              Debug_Log("EVENTO: Pulsacion validada en PB11\r\n");
-	          }
+	      /* 2. Ejecución de la FSM de Efectos (Temporizada con API_delay) */
+	      if (delayRead(&timerSecuencia)) {
+	    	  switch (escenaActual) {
 
-	          /* 3. Tareas Asíncronas (LEDs) */
-	          if (delayRead(&delayLED1)) {
-	              LED_Toggle(&ledVerde);
-	          }
+	    	                  case MODO_SYNC:
+	    	                      delayWrite(&timerSecuencia, 500);
+	    	                      LED_ToggleAll(Leds, CANT_LEDS);
+	    	                      Debug_Log("MODO: Sincronizado - Toggle All\r\n");
+	    	                      break;
 
-	          if (delayRead(&delayLED2)) {
-	              LED_Toggle(&ledAzul);
-	          }
+	    	                  case MODO_CARRERA:
+	    	                      delayWrite(&timerSecuencia, 150);
+	    	                      LED_All_Off(Leds, CANT_LEDS);
+	    	                      LED_On(&Leds[paso]);
+	    	                      // Log que indica qué LED se enciende
+	    	                      	  if(paso == 0) Debug_Log("CARRERA: LED Rojo\r\n");
+	    	                      	  if(paso == 1) Debug_Log("CARRERA: LED Amarillo\r\n");
+	    	                          if(paso == 2) Debug_Log("CARRERA: LED Verde\r\n");
+	    	                          if(paso == 3) Debug_Log("CARRERA: LED Azul\r\n");
+
+	    	                      paso = (paso + 1) % CANT_LEDS;
+	    	                      break;
+
+	    	                  case MODO_REBOTE:
+	    	                      delayWrite(&timerSecuencia, 100);
+	    	                      LED_All_Off(Leds, CANT_LEDS);
+	    	                      LED_On(&Leds[paso]);
+	    	                      Debug_Log("REBOTE: Posicion actual\r\n");
+	    	                      if (direccion) paso++; else paso--;
+	    	                      if (paso == (CANT_LEDS - 1) || paso == 0){
+	    	                    	  direccion = !direccion;
+	    	                    	  Debug_Log("REBOTE: Cambio de sentido\r\n");
+	    	                      }
+	    	                      break;
+
+	    	                  case MODO_STREAK:
+	    	                      delayWrite(&timerSecuencia, 200);
+	    	                      if (paso < CANT_LEDS) {
+	    	                          LED_On(&Leds[paso]);
+	    	                          Debug_Log("STREAK: Agregando LED\r\n");
+	    	                      } else {
+	    	                          LED_All_Off(Leds, CANT_LEDS);
+	    	                          Debug_Log("STREAK: Reset\r\n");
+	    	                      }
+	    	                      paso = (paso + 1) % (CANT_LEDS + 1);
+	    	                      break;
+
+	    	                  case MODO_ALARMA:
+	    	                      delayWrite(&timerSecuencia, 80);
+	    	                      LED_Toggle(&Leds[0]); // Rojo
+	    	                      LED_Toggle(&Leds[3]); // Azul
+	    	                      LED_Off(&Leds[1]);    // Amarillo apagado
+	    	                      LED_Off(&Leds[2]);    // Verde apagado
+	    	                      Debug_Log("ALARMA: Strobe activo\r\n");
+	    	                      break;
+
+	    	                  case MODO_RANDOM:
+	    	                      delayWrite(&timerSecuencia, 120);
+	    	                      LED_All_Off(Leds, CANT_LEDS);
+	    	                      uint8_t r = HAL_GetTick() % CANT_LEDS;
+	    	                      LED_On(&Leds[r]);
+	    	                      Debug_Log("RANDOM: LED Aleatorio\r\n");
+	    	                      break;
+
+	    	                  default:
+	    	                      escenaActual = MODO_SYNC;
+	    	                      break;
+	    	              }
+	      }
   }
   /* USER CODE END 3 */
 }
@@ -185,10 +260,17 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLN = 180;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Activate the Over-Drive mode
+  */
+  if (HAL_PWREx_EnableOverDrive() != HAL_OK)
   {
     Error_Handler();
   }

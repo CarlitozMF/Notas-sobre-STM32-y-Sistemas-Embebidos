@@ -49,4 +49,18 @@ void LED_Off(led_t * led);
  */
 void LED_Toggle(led_t * led);
 
+/**
+ * @brief Apaga todos los LEDs del grupo.
+ * @param ledGroup Arreglo de estructuras led_t.
+ * @param size Cantidad de LEDs en el arreglo.
+ */
+void LED_All_Off(led_t ledGroup[], uint8_t size);
+
+/**
+ * @brief Conmuta el estado de todos los LEDs del grupo.
+ * @param ledGroup Arreglo de estructuras led_t.
+ * @param size Cantidad de LEDs en el arreglo.
+ */
+void LED_ToggleAll(led_t ledGroup[], uint8_t size);
+
 #endif /* CUSTOM_DRIVERS_INC_API_LED_H_ */
