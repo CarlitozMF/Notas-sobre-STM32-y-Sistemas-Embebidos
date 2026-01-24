@@ -41,7 +41,7 @@ En esta etapa, los proyectos integradores migran hacia un esquema de **Planifica
 ## 🛠️ Roadmap de Laboratorios
 1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Gestión de flancos y prioridades en el NVIC.
 2. **[02_TIM_Basic](./02_TIM_Basic):** Creación de bases de tiempo precisas para tareas cíclicas.
-3. **[03_UART_IT](./03_UART_IT):** (Próximamente) Comunicación serie bidireccional por interrupción.
+
 
 ---
 
