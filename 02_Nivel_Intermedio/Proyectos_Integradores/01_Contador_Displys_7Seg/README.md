@@ -4,7 +4,7 @@ Este proyecto representa un hito en el **Nivel Intermedio** de mi formación en 
 
 ## 🧠 Arquitectura de Software
 
-El sistema abandona el flujo secuencial tradicional y adopta una estructura de **Sistemas de Tiempo Real (RTOS-like)** mediante los siguientes pilares:
+El sistema evoluciona del flujo secuencial tradicional hacia una Arquitectura Basada en Tareas y Eventos, estructurada bajo los siguientes pilares:
 
 ### 1. Planificador Cooperativo (Task Scheduler)
 Se implementó un despachador de tareas no bloqueante en el `while(1)`. Las tareas se ejecutan basándose en una tabla de control (`task_t`) que compara el tiempo transcurrido mediante el `SysTick`.
