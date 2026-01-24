@@ -1,41 +1,57 @@
-# ⚙️ 02_Nivel Intermedio: Sistemas de Tiempo Real y Periféricos
+# ⚙️ Nivel Intermedio: Sistemas de Tiempo Real y Periféricos
 
-Bienvenido al segundo nivel de mi bitácora de aprendizaje. En esta etapa, el enfoque cambia radicalmente: dejamos de usar el procesador de forma lineal (Polling) para dominar el **Procesamiento Basado en Eventos**.
+Bienvenido a la segunda etapa de mi bitácora de desarrollo. En este nivel, el enfoque cambia radicalmente: abandonamos el flujo lineal para dominar el **Procesamiento Basado en Eventos y Tareas**.
 
-El objetivo principal es aprender a utilizar el hardware interno del **STM32F439ZI** para que realice tareas de forma autónoma, liberando al CPU para procesos de mayor nivel.
+El objetivo principal es explotar el hardware interno del **STM32F439ZI** para lograr autonomía en los periféricos, liberando al CPU para procesos de lógica de alto nivel y toma de decisiones.
 
 ---
 
 ## 🚀 Pilares del Nivel Intermedio
 
-### 1. Interrupciones (NVIC & EXTI) ⚡
-Es la capacidad del microcontrolador de "pausar" su tarea actual para atender un evento urgente de forma inmediata.
-* **Concepto:** Adiós al Polling. El hardware nos avisa cuando ocurre un evento.
-* **Aplicaciones:** Botones de emergencia, sensores de velocidad, detección de flancos.
+### 1. Gestión de Eventos (NVIC & EXTI) ⚡
+Implementación de interrupciones para lograr una latencia mínima de respuesta ante estímulos externos.
+* **Determinismo:** Respuesta inmediata a eventos críticos sin depender del ciclo del `main`.
+* **Debouncing:** Técnicas de filtrado de ruido y rebotes tanto por software (timers) como por hardware.
+* **Contexto:** Dominio del controlador de interrupciones vectorizado (NVIC).
 
-### 2. Temporizadores (Timers) ⏱️
-El "corazón" del sistema. Aprenderemos a gestionar el tiempo sin bloquear la ejecución del código.
-* **Base de Tiempo:** Generar interrupciones cíclicas (ej: cada 1ms).
-* **PWM (Pulse Width Modulation):** Control de intensidad lumínica y servomotores.
-* **Encoder Mode:** Lectura de sensores de posición para robótica.
+### 2. Control de Tiempo (Timers) ⏱️
+El "corazón" del sistema. Gestión de bases de tiempo precisas para tareas asíncronas y concurrentes.
+* **Multiplexación:** Control de periféricos en "background" (como el Driver de 7 Segmentos).
+* **PWM (Pulse Width Modulation):** Generación de señales para control de potencia y actuadores.
+* **Encoder Mode:** Lectura profesional de sensores de posición y velocidad.
 
-### 3. Protocolos de Comunicación (I2C, SPI, UART) 📬
-Estableceremos diálogo con otros dispositivos y sensores externos.
-* **UART con Interrupciones:** Recibir datos en segundo plano.
-* **I2C:** Comunicación con sensores inerciales (MPU6050) y pantallas OLED.
-* **SPI:** Transferencia de datos a alta velocidad.
+### 3. Comunicación y Middleware 📬
+Estandarización del diálogo con el mundo exterior y abstracción de hardware.
+* **Arquitectura No Bloqueante:** Uso de interrupciones en UART para evitar cuellos de botella en la transmisión/recepción.
+* **Middleware:** Creación de drivers portables, modulares y reutilizables basados en estructuras y punteros.
+
+---
+
+## 🏗️ Arquitectura de Software Aplicada
+En esta etapa, los proyectos integradores migran hacia un esquema de **Planificador Cooperativo (Task Scheduler)**:
+
+* **Task Table:** Organización y ejecución de tareas basadas en períodos de tiempo específicos.
+* **Estado Volátil:** Gestión segura de memoria compartida entre las ISR (Rutinas de Servicio de Interrupción) y el lazo principal.
+* **Encapsulamiento:** Uso de *Handles* y estructuras de datos para un código limpio y escalable.
 
 
 
 ---
 
-## 🛠️ Roadmap de Proyectos
-1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Contador de 3 Dígitos con Control EXTI.
-2. **[02_TIM_Basic](./02_TIM_Basic):** Introducción a la gestion de bases tiempo con Timers.
-
-
-## ⚙️ [Roadmap de Proyectos Integradores](./Proyectos_Integradores/) Carpeta de Interesantes Proyectos de Integración.
-1. **[01_Contador_Displays_7Seg](./Proyectos_Integradores/01_Contador_Displys_7Seg/):** EI1 - Drivers, Timers e Interrupciones. 
+## 🛠️ Roadmap de Laboratorios
+1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Gestión de flancos y prioridades en el NVIC.
+2. **[02_TIM_Basic](./02_TIM_Basic):** Creación de bases de tiempo precisas para tareas cíclicas.
+3. **[03_UART_IT](./03_UART_IT):** (Próximamente) Comunicación serie bidireccional por interrupción.
 
 ---
-*Notas creadas durante mi proceso de estudio y experimentación en San Miguel de Tucumán.*
+
+## 🚀 Proyectos Integradores (EI)
+*Proyectos de síntesis donde se combinan múltiples periféricos bajo una arquitectura robusta.*
+
+### 01. [Contador de Personas Real-Time (Doble Barrera IR)](./Proyectos_Integradores/01_Contador_Displys_7Seg/)
+* **Hito:** Implementación exitosa del primer **Scheduler Cooperativo**.
+* **Hardware:** Sensores HW-201 + Display 7-Segmentos multiplexado.
+* **Técnicas:** EXTI Falling Edge, Timer-IT (181Hz), Software Debounce y Driver con soporte ASCII.
+
+---
+*💻 Orquestando el silicio: del código secuencial a la autonomía del hardware.*
