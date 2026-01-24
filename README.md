@@ -58,6 +58,9 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **01_EXTI_Pulsadores:** *Manejo de interrupciones externas para respuesta inmediata.*
 * **02_TIM_Basic:** *Introduccion al manejo de base de Tiempos con Timers.*
 
+#### **[Proyectos Integradores](./02_Nivel_Intermedio/Proyectos_Integradores/)**
+* **01. Contador_Contador_Displays_7Seg** *Evolucion del flujo secuencial tradicional hacia una Arquitectura Basada en Tareas y Eventos.*
+
 ### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento) - PROXIMAMENTE -
 * **DMA & RTOS:** *Gestión de tareas paralelas y transferencia de datos eficiente.*
 * **Low Power:** *Optimización de consumo energético.*
