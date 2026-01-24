@@ -1,0 +1,34 @@
+graph TD
+    A[Inicio del Programa] --> B{HAL_Init & Periféricos};
+    B --> C[Driver Display Init];
+    C --> D[Mensaje Inicial "HI"];
+
+    D --> E{Loop Principal: while(1)};
+
+    E --> F{currentTick = HAL_GetTick()};
+
+    F --> G{Para cada Tarea en la Tabla};
+    G --> H{Tiempo de Tarea Cumplido?};
+
+    H -- Sí --> I[Ejecutar Tarea (ej: Heartbeat, ReporteUART, DisplayUpdate)];
+    I --> J[Actualizar lastTick de la Tarea];
+    J --> G; /* Volver a la siguiente Tarea */
+
+    H -- No --> G; /* Saltar a la siguiente Tarea */
+
+    G -- Fin de Tareas --> E; /* Volver al inicio del Loop */
+
+    subgraph Interrupciones
+        K[IRQ Timer2 (ISR Display)] --> L[Display7Seg_Refresh_ISR];
+        L --> M[Actualizar Display];
+        M --> K; /* Retorno */
+
+        N[IRQ EXTI (Sensores)] --> O[HAL_GPIO_EXTI_Callback];
+        O --> P{Debounce OK?};
+        P -- Sí --> Q[Incrementar/Decrementar Contador];
+        Q --> N; /* Retorno */
+        P -- No --> N; /* Retorno */
+    end
+
+    E -.-> K; /* El Loop es interrumpido por el Timer */
+    E -.-> N; /* El Loop es interrumpido por los Sensores */

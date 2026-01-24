@@ -33,5 +33,9 @@ Estableceremos diálogo con otros dispositivos y sensores externos.
 1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Contador de 3 Dígitos con Control EXTI.
 2. **[02_TIM_Basic](./02_TIM_Basic):** Introducción a la gestion de bases tiempo con Timers.
 
+
+## ⚙️ [Roadmap de Proyectos Integradores](./Proyectos_Integradores/) Carpeta de Interesantes Proyectos de Integración.
+1. **[01_Contador_Displays_7Seg](./Proyectos_Integradores/01_Contador_Displys_7Seg/):** EI1 - Drivers, Timers e Interrupciones. 
+
 ---
 *Notas creadas durante mi proceso de estudio y experimentación en San Miguel de Tucumán.*

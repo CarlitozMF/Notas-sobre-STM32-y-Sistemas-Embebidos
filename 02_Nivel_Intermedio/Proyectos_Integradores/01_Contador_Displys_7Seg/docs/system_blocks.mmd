@@ -1,0 +1,21 @@
+graph TD
+    subgraph Microcontrolador STM32
+        A[CPU] --> B(Planificador de Tareas Cooperativo);
+        B --> C[Tarea: Heartbeat (LED)];
+        B --> D[Tarea: Reporte UART];
+        B --> E[Tarea: Actualizar Display Buffer];
+
+        F[Periférico: Timer2] --> G(ISR Display Refresh);
+        G --> H[Driver 7-Segmentos];
+        H --> I[Buffer de Display];
+
+        J[Periférico: EXTI (Interrupciones)] --> K(ISR Sensores);
+        K --> L[Lógica: Contador de Personas];
+        L --> I; /* Contador actualiza el buffer */
+    end
+
+    M[Sensor HW-201 (Entrada)] --> J;
+    N[Sensor HW-201 (Salida)] --> J;
+    O[Display 7-Segmentos] --> H;
+    P[Terminal Serial / PC] --> D;
+    Q[LED de Estado] --> C;
