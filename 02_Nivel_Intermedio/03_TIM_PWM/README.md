@@ -81,15 +81,8 @@ Las tareas se organizan con diferentes prioridades implícitas según su frecuen
 |Heartbeat  |   500 ms  |   2 Hz    |   Monitoreo de salud del Kernel.  |
 
 Se define una tabla de tareas con su tiempo de ejecucion.
- ```c
- /* --- Tabla de Tareas --- */
-Task_t taskTable[] = {
-    { Task_Heartbeat,    500, 0 }, // Tarea 1: Cada 500ms
-    { Task_BreathingLED,  15, 0 }, // Tarea 2: Cada 15ms
-    { Task_RGBHandler,    30, 0 }  // Tarea 3: Cada 30ms
-};
-#define NUM_TASKS (sizeof(taskTable)/sizeof(Task_t)
-```
+
+
     1. Task_Heartbeat (GPIO Toggle)
 Funciona como el monitor de salud del sistema.
 * Periférico: LED externo conectado al pin PB8 (usr_ledRojo).
@@ -106,9 +99,9 @@ Controla un LED para generar un efecto de "respiración".
 Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para un LED RGB.
 * Periférico: TIM4 (Canales 2, 3 y 4).
 * Funcionalidad:
-        1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
-        2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
-        3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
+        **1. Abstracción:** El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
+        **2. Modelo HSV:** Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
+        **3. Corrección Gamma:** Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
 
 ### Ejecución del Planificador
 
