@@ -1,61 +1,55 @@
 # 📂 Proyectos Integradores (Nivel Básico)
 
-Este directorio contiene los proyectos finales del **Nivel Básico** de aprendizaje en sistemas embebidos con STM32. El objetivo de esta sección es consolidar los conocimientos atómicos (GPIO, Bits, Delays) en aplicaciones reales y funcionales.
+Este directorio consolida el **Nivel Básico** de aprendizaje en sistemas embebidos. Aquí, los conocimientos atómicos (GPIO, Bits, Delays) se transforman en aplicaciones reales mediante el uso de arquitecturas de software profesionales.
 
-## 🚀 Filosofía de Diseño
-Cada proyecto en esta carpeta cubre los siguientes aspectos fundamentales:
-1. **Modularidad:** Uso de funciones para separar la lógica de control del hardware.
-2. **Robustez:** Implementación de antirrebotadores (debounce) y gestión de estados de error.
-3. **Feedback de Usuario (HMI):** Comunicación constante con el usuario a través de LEDs, Displays y Terminal Serial (UART).
-4. **Modularidad Total:** Drivers `API_` (Delay, LED, Debounce) que separan la aplicación del hardware.
-5. **Programación No Bloqueante:** Sustitución definitiva de retardos por lógica asíncrona de Ticks.
-6. **MEFs Jerárquicas:** Una máquina de estados de driver (bajo nivel) alimentando a una máquina de estados de aplicación (alto nivel).
+## 🚀 Filosofía de Diseño: El Estándar de API
+Cada proyecto en esta carpeta se rige por un esquema de capas que separa el silicio de la aplicación:
+
+1. **Modularidad Total:** Drivers `API_` (Delay, LED, Debounce) que actúan como capas de abstracción.
+2. **Programación No Bloqueante:** Sustitución definitiva de `HAL_Delay()` por lógica asíncrona basada en Ticks.
+3. **MEFs Jerárquicas:** Una máquina de estados de bajo nivel (Driver) alimentando a una máquina de estados de alto nivel (Aplicación).
+4. **Escalabilidad:** Uso intensivo de punteros y estructuras para manejar hardware de forma genérica.
+
+
 
 ---
 
-## 🛠️ Proyectos Incluidos
+## 🛠️ Portafolio de Proyectos
 
-| Proyecto | Descripción | Conceptos Clave |
+| Proyecto | Descripción | Conceptos Clave de Ingeniería |
 | :--- | :--- | :--- |
-| **01_Contador_Up_Down_7Seg** | Contador UP/DOWN (0-9) con detección de límites. | *Active-Low, Ventana de Reset, Feedback Visual.* |
-| **02_Semaforo_Smart** | Sistema de tráfico automático con transición de seguridad. | *Máquina de Estados Finitos (MEF), Sincronización.* |
-| **03_Simon_Dice** | Juego de memoria con 4 botones y 4 LEDs. | *Arreglos, Generación Aleatoria, Lógica de Juego.* |
-| **04_Integracion_APIs** | Controlador maestro de 6 efectos visuales. | *Multitarea Cooperativa y Lógica de Grupos.* |
+| **[01.Contador_Up-Down](./01.Contador_Up_Down_7Seg)** | Contador 0-9 con detección de límites y feedback visual. | *Active-Low, Edge Detection, Multiplexación.* |
+| **[02.Semaforo_Smart](./02.Semaforo_Smart)** | Sistema de tráfico con transiciones de seguridad. | *FSM determinista, Temporización por estados.* |
+| **[03.Simon_Dice](./03.Simon_Dice)** | Juego de memoria y destreza mental. | *Algoritmos de aleatoriedad, Manejo de arreglos.* |
+| **[04.Integracion_APIs](./04.Integracion_APIs)** | Secuenciador maestro de efectos visuales. | *Multitarea Cooperativa, Abstracción de Grupos.* |
 
 ---
 
-## 🧠 Competencias Adquiridas
+## 🧠 Competencias de Ingeniería Adquiridas
 
-Al completar estos tres proyectos, se han dominado las siguientes áreas:
+Al completar esta fase, se han dominado las siguientes áreas críticas para el desarrollo profesional:
 
-### 1. Máquinas de Estados Finitos (MEF/FSM)
-Capacidad para organizar el flujo del programa en estados lógicos (`enum` + `switch-case`), permitiendo que el microcontrolador tome decisiones complejas de forma ordenada.
+### 1. Multitarea Cooperativa (Async Logic)
+Dominio del tiempo sin bloqueos del CPU. El firmware puede procesar la UART, filtrar el ruido mecánico de un pulsador y ejecutar secuencias visuales de alta velocidad simultáneamente, garantizando una latencia mínima.
 
-### 2. Abstracción de Hardware
-Uso de estructuras (`struct`) para definir periféricos como el Display de 7 segmentos, facilitando la portabilidad del código entre diferentes pines o placas.
+### 2. Máquinas de Estados Finitos (FSM)
+Capacidad para modelar el comportamiento del sistema mediante `enum` + `switch-case`. Esto asegura un sistema determinista donde el microcontrolador siempre se encuentra en un estado conocido y seguro.
 
-### 3. Comunicación y Depuración
-Implementación de drivers básicos de UART (`Debug_Log`) para monitorear variables y estados internos del sistema en tiempo real desde una PC.
 
-### 4. Gestión de Tiempos y Eventos
-Diferenciación entre el uso de bloqueos controlados (`HAL_Delay`) y la necesidad de escaneo constante de entradas (Polling activo) para interfaces de usuario fluidas.
 
-### 5. Multitarea Cooperativa (Async Logic)
-Dominio del tiempo sin bloqueos del CPU. El sistema puede procesar una UART, filtrar el ruido de un botón y ejecutar secuencias de 50ms simultáneamente sin que un proceso interfiera con el otro.
+### 3. Drivers Reentrantes y Modulares
+Creación de librerías propias (`API_debounce`, `API_delay`) que son independientes del hardware. Estos drivers son "cajas negras" reutilizables que permiten migrar el código a otras placas STM32 con un esfuerzo de re-mapeo mínimo.
 
-### 6. Lógica de Abstracción de Grupos
-Capacidad para diseñar APIs que manejan colecciones de hardware. El uso de punteros y arreglos de estructuras permite escalar el sistema (ej. pasar de 3 a 8 LEDs) modificando una sola línea de código.
-
-### 7. Drivers Reentrantes y Modulares
-Creación de librerías propias (`API_debounce`, `API_delay`) que son independientes del proyecto. Estos drivers son "cajas negras" que pueden copiarse y pegarse en cualquier nuevo desarrollo de STM32.
+### 4. Telemetría y Diagnóstico (UART)
+Implementación de canales de comunicación para monitorear variables internas y estados de la FSM en tiempo real, facilitando la depuración en sistemas donde el Debugger físico no es suficiente.
 
 ---
 
 ## 🔧 Requisitos del Laboratorio
-- **Hardware:** Nucleo-F439ZI (STM32F4) + Pulsadores externos en Pull-Up/Down + Leds diversos colores con su respectiva resistencia.
-- **Software:** STM32CubeIDE + Doxygen para la documentación de las APIs.
-- **Protocolo:** Comunicación Serial a 115200 baudios.
+* **Hardware:** Nucleo-F439ZI (Cortex-M4) + Pulsadores externos + Módulos de LEDs y Displays de 7 segmentos.
+* **Protocolo:** Comunicación Serial a **115200 baudios**.
+* **Entorno:** STM32CubeIDE con documentación técnica basada en comentarios de ingeniería.
 
 ---
-# **🏁 NIVEL BÁSICO COMPLETADO.** 
-*Los cimientos están listos. El siguiente paso es el **Nivel Intermedio**, donde introduciremos **Interrupciones (EXTI)** y **Timers por Hardware** para alcanzar una respuesta en tiempo real determinística. Además, profundizaremos en el manejo avanzado de los periféricos integrados de la placa Nucleo, integrando sensores y actuadores mediante protocolos de comunicación industrial, preparándonos para el diseño de sistemas embebidos de alta complejidad.*
+
+# **🏁 NIVEL BÁSICO COMPLETADO.** *Los cimientos están listos. El sistema ya es capaz de gestionar lógica compleja de forma asíncrona mediante Polling. El siguiente paso es el **Nivel Intermedio**, donde introduciremos **Interrupciones (EXTI)** y **Timers por Hardware** para alcanzar una respuesta en tiempo real determinística y eficiencia energética superior.*
