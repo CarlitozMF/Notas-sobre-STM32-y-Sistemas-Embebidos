@@ -19,6 +19,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **Placa:** STM32 Nucleo-F439ZI (Cortex-M4 @ 180MHz)
 * **IDE:** STM32CubeIDE
 * **Framework:** STM32Cube HAL (Hardware Abstraction Layer)
+* **Depuración:** ST-LINK/V2-1 (On-board) + STM32CubeMonitor
 
 ---
 
@@ -31,40 +32,40 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **Diccionario de Funciones:** *Sintaxis de WritePin, ReadPin y Delay.*
 * **Troubleshooting:** *Solución de errores comunes y Debugging.*
 
-
-
 ### 🏗️ [01_Nivel Básico (GPIO & Lógica de Control)](./01_Nivel_Basico/) - ✅ ACTUALIZADO 22/01/2026 -
-* **01_Hola_Mundo:** *Hola Mundo visual controlando los LEDs de la placa.*
-* **02_Tipos_De_Variables:** *Gestión de memoria y tipos de datos de ancho fijo (`stdint.h`).*
-* **03_Estructuras:** *Optimización de memoria RAM mediante structs.*
-* **04_Bitwise_Logic:** *Manipulación de registros con lógica de bits.*
-* **05_GPIO_Input_Polling:** *Lectura de entradas digitales mediante escaneo.*
-* **06_LED_Bus_Structures:** *Automatización de secuencias de salida.*
-* **07_Display_7_Segmentos:** *Control de display numérico.*
-* **08_Multiplex_7Seg:** *Nociones Básicas de Multiplexación.*
-* **09_Intro_MEF:** *Introducción y aplicación de MEF simples.*
-* **10_API_Drivers:** *Crecion de Drivers Personalizados para gestión de tareas y abstracción de hardware.*
-* **11_Debounce_Avanzado:** *Driver para eliminar debounce con MEF y Gestion de Tiempo No Bloqueante.*
+*Fundamentos de electrónica digital y programación estructurada:*
+* **01 al 04:** *Variables de ancho fijo (`stdint.h`), Estructuras y Lógica de Bits.*
+* **05 al 08:** *Gestión de GPIO, Polling, Buses de salida y Multiplexación.*
+* **09 al 11:** *Máquinas de Estado Finitos (MEF), creación de Drivers (APIs) y Debounce No Bloqueante.*
 
-#### **[Proyectos Integradores](./01_Nivel_Basico/Proyectos_Integradores/)**
-* **01. Contador_Up_Down_7Seg:** *Uso de Active-Low, Debounce y ventana de Reset.*
-* **02. Semaforo_Smart:** *Aplicación de Máquina de Estados Finitos (MEF).*
-* **03. Simon_Dice:** *Gestión de memoria, arreglos y lógica de juego física.*
-* **04.Integracion_Apis:** *Integración de arquitectura de software, modularidad y máquinas de estados.*
+#### **Proyectos Integradores Nivel 1**
+* **Contador_Up_Down_7Seg** | **Semaforo_Smart** | **Simon_Dice** | **Integración de APIs y Modularidad.**
 
+### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/) - 🚀 EN CURSO -
+*Transición hacia el procesamiento basado en eventos y autonomía del hardware:*
+* **01_EXTI_Pulsadores:** *Interrupciones externas y prioridades en el NVIC.*
+* **02_TIM_Basic:** *Bases de tiempo precisas para tareas asíncronas.*
+* **03_TIM_PWM:** *Control de potencia y gestión mediante **Kernel Cooperativo (Task Scheduler)**.*
+* **04_TIM_Input_Capture:** *Medición de señales externas (Frecuencia/Ancho de Pulso).* 🆕
+* **05_TIM_Encoder:** *Odometría y control de posición para robótica.* 🆕
+* **06_ADC_Multichannel:** *Adquisición de señales analógicas y sensores.* 🆕
+* **07_COM_Protocols:** *Comunicación bidireccional mediante UART/I2C/SPI.* 🆕
 
-
-### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/)- 🚀 EN CURSO -
-* **01_EXTI_Pulsadores:** *Manejo de interrupciones externas para respuesta inmediata.*
-* **02_TIM_Basic:** *Introduccion al manejo de base de Tiempos con Timers.*
-* **03_TIM_PWM:** *Señales PWM y gestión de Tareas mediante un Planificador -Kernel-*
-
-#### **[Proyectos Integradores](./02_Nivel_Intermedio/Proyectos_Integradores/)**
-* **01. Contador_Contador_Displays_7Seg:** *Evolucion del flujo secuencial tradicional hacia una Arquitectura Basada en Tareas y Eventos.*
+#### **Proyectos Integradores Nivel 2**
+* **01. Contador_RealTime_7Seg:** *Evolución hacia Arquitectura Basada en Tareas.*
+* **02. Smart_Power_Meter:** *Adquisición sincronizada de tensión y corriente.* 🆕
 
 ### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento) - PROXIMAMENTE -
-* **DMA & RTOS:** *Gestión de tareas paralelas y transferencia de datos eficiente.*
-* **Low Power:** *Optimización de consumo energético.*
+* **DMA & RTOS:** *Transferencia de datos sin intervención de CPU y sistemas operativos de tiempo real.*
+* **Low Power:** *Modos de bajo consumo y optimización energética (Sleep/Stop/Standby).*
+* **Digital Signal Processing (DSP):** *Filtros digitales y procesamiento de señales en el Cortex-M4.*
+
+---
+
+## 🔬 Conceptos Clave Implementados
+* **Non-blocking Code:** Eliminación total de `HAL_Delay()` en favor de temporización por software/hardware.
+* **Encapsulamiento:** Drivers modulares que separan la lógica de aplicación del hardware.
+* **Determinismo:** Gestión de latencias mediante prioridades en el NVIC.
 
 ---
 
