@@ -1,6 +1,14 @@
 # 02_TIM_Basic: Gestión de Tiempo y Base de Tiempo con TIM1 ⏱️
 
-Este proyecto documenta el uso de **Timers** de hardware para crear bases de tiempo precisas en la **Nucleo-F439ZI**. El objetivo es demostrar cómo el hardware gestiona tareas críticas de forma asíncrona, liberando al procesador para realizar otras tareas en el bucle principal sin usar funciones bloqueantes.
+Este proyecto documenta el uso de los **Timers de hardware** para crear bases de tiempo precisas en la **Nucleo-F439ZI**. El enfoque principal es demostrar cómo el hardware gestiona tareas críticas de forma asíncrona, liberando al procesador para realizar procesos concurrentes sin funciones bloqueantes.
+
+## 🎯 Objetivos
+- **Comprender la arquitectura de buses** del STM32F4 y su impacto en la frecuencia de los periféricos.
+- **Calcular y configurar registros de Timer** (Prescaler y Auto-Reload) para obtener tiempos exactos.
+- **Implementar tareas asíncronas** mediante interrupciones de periodo transcurrido (*Update Event*).
+- **Validar el diseño de firmware** mediante instrumentación externa (Analizador Lógico).
+
+---
 
 ## 🚌 Arquitectura de Buses y Timers (APB1 vs APB2)
 
