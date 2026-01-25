@@ -1,38 +1,41 @@
-# 09_Intro_MEF: Máquinas de Estado y Monitoreo Serial 🚀
+# 09_Intro_MEF: Máquinas de Estado y Diagnóstico Serial 🚀
 
-Este proyecto marca un hito fundamental en el **Nivel Básico**. Aquí evolucionamos de la programación secuencial simple a una arquitectura basada en **Máquinas de Estado Finita (FSM/MEF)**, integrando por primera vez la comunicación serie (UART) para depuración y diagnóstico del sistema.
+Este proyecto marca un hito fundamental en el **Nivel Básico**. Aquí evolucionamos de la programación secuencial a una arquitectura basada en **Máquinas de Estado Finitas (FSM/MEF)**, integrando la comunicación serie (UART) para depuración y diagnóstico del sistema en tiempo real.
 
-## 🧠 El Corazón del Diseño: Máquina de Estados Finita (MEF)
+## 🧠 El Corazón del Diseño: Máquina de Moore
 
-En este proyecto, la lógica de control se basa en el modelo de **Máquina de Moore**, donde las salidas dependen únicamente del estado actual. Implementar una MEF en sistemas embebidos ofrece ventajas críticas:
+La lógica de control se basa en el modelo de **Máquina de Moore**, donde las salidas del sistema dependen únicamente del estado actual. Implementar una MEF en sistemas embebidos ofrece ventajas críticas para la ingeniería:
 
-* **Determinismo:** El sistema siempre se encuentra en un estado conocido y responde de manera predecible a las entradas.
-* **Escalabilidad:** Es mucho más sencillo agregar nuevos modos de operación añadiendo un `case` adicional que intentando anidar múltiples estructuras `if-else`.
-* **Mantenimiento:** Facilita la depuración, ya que si el sistema falla en una acción específica, sabemos exactamente en qué bloque del `switch-case` se encuentra el error.
+* **Determinismo:** El sistema siempre se encuentra en un estado conocido y responde de manera predecible a los eventos.
+* **Escalabilidad:** Agregar nuevos modos de operación es tan simple como añadir un `case` al bloque principal, sin romper la lógica existente.
+* **Mantenimiento:** Facilita la depuración al aislar comportamientos. Si el sistema falla en una acción, sabemos exactamente en qué bloque de la MEF buscar el error.
 
-### Modos de Operación:
-1.  **ESTADO_APAGADO**: El LED se mantiene en reposo.
-2.  **ESTADO_ENCENDIDO**: El LED emite luz constante.
-3.  **ESTADO_PARPADEO**: El LED oscila de forma asíncrona (usando `HAL_GetTick()`).
+### Estados del Sistema:
+1.  **`ESTADO_APAGADO`**: Reposo absoluto del actuador.
+2.  **`ESTADO_ENCENDIDO`**: Salida constante a nivel alto.
+3.  **`ESTADO_PARPADEO`**: Oscilación asíncrona controlada por tiempo no bloqueante (`HAL_GetTick()`).
 
-## 🏗️ Implementación y Hardware
+---
 
-### 1. Interfaz de Usuario (PB11)
-Se utiliza un pulsador externo conectado al pin **PB11** y a **GND**. 
-* **Lógica Negativa**: El pin está configurado con **Pull-Up interna**, por lo que el evento se dispara cuando el micro lee un `0` lógico.
-* **Detección de Flanco**: Se implementó una lógica de "flag" para asegurar que la transición de estado ocurra solo una vez por pulsación, evitando que el sistema salte de estados infinitamente mientras se mantiene el botón presionado.
+## 🏗️ Implementación de Hardware y Telemetría
 
-### 2. Diagnóstico por UART
-Se implementó una función personalizada `Debug_Log` para enviar mensajes de estado a una terminal serial (**115200 baudios**).
-* **Log de Inicio**: Mensaje de bienvenida que confirma que el Clock Tree y la UART están bien configurados.
-* **Log de Transición**: El sistema informa cada vez que ocurre un cambio de estado.
+### 1. Interfaz de Usuario (HMI)
+Se utiliza un pulsador externo conectado al pin **PB11** con configuración de **Pull-Up interna**.
+* **Lógica Negativa:** El evento de presión se detecta con un `0` lógico (GND).
+* **Detección de Flanco (Edge Detection):** Se implementó una lógica de "flag" para asegurar que la transición ocurra una sola vez por pulsación, evitando el salto infinito de estados mientras se mantiene el botón presionado.
 
-💻 Fragmento Clave: La Estructura de la MEF
+### 2. Diagnóstico por UART (Universal Asynchronous Receiver-Transmitter)
+Se implementó la función personalizada `Debug_Log` para telemetría a **115200 baudios** a través de la **UART3** (ST-Link Virtual COM Port).
+* **Logs de Transición:** El sistema informa por consola cada vez que el motor de estados realiza un cambio de fase.
 
-El siguiente código es el núcleo del proyecto. Observa cómo el switch-case permite que el microcontrolador tenga "memoria" de su estado actual:
+---
+
+## 💻 Arquitectura del Código: El "Switch-Case" Motor
+
+El núcleo del firmware se divide en dos secciones: **Lógica de Transición** (cuándo cambiar) y **Lógica de Estado** (qué hacer).
 
 ```c
-/* 1. LÓGICA DE TRANSICIÓN: Decidimos el próximo estado basado en la entrada */
+/* 1. LÓGICA DE TRANSICIÓN: Basada en detección de flanco descendente */
 if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11) == GPIO_PIN_RESET) {
     if (!botonPresionado) {
         botonPresionado = true; 
@@ -42,14 +45,13 @@ if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11) == GPIO_PIN_RESET) {
             case ESTADO_ENCENDIDO: estadoActual = ESTADO_PARPADEO;  break;
             case ESTADO_PARPADEO:  estadoActual = ESTADO_APAGADO;   break;
         }
-        // El log se dispara solo en la transición, evitando saturar la UART
-        Debug_Log("FSM: Cambio de estado detectado\r\n");
+        Debug_Log("FSM: Transicion a nuevo estado...\r\n");
     }
 } else {
-    botonPresionado = false; // Reset del flag (detección de flanco)
+    botonPresionado = false; // Reset del flag para la próxima pulsación
 }
 
-/* 2. LÓGICA DE ESTADO: Ejecutamos la acción correspondiente al estado actual */
+/* 2. LÓGICA DE ESTADO: Ejecución según el estado actual de la MEF */
 switch (estadoActual) {
     case ESTADO_APAGADO:
         HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
@@ -60,7 +62,7 @@ switch (estadoActual) {
         break;
         
     case ESTADO_PARPADEO:
-        // Acción temporal no bloqueante
+        // Temporización no bloqueante: la MEF sigue "viva" mientras espera
         if (HAL_GetTick() - lastTick >= 200) {
             HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
             lastTick = HAL_GetTick();
@@ -69,23 +71,13 @@ switch (estadoActual) {
 }
 ```
 
-## 🛠️ Configuración Técnica
-- **Microcontrolador**: STM32F439ZI (Nucleo-144).
-- **Periféricos**: GPIO (Salida para LED, Entrada para Botón) y UART3 (ST-Link Virtual COM Port).
-- **Herramientas**: STM32CubeIDE.
+## ⚠️ Análisis sobre el Costo del Bloqueo
 
-## ⚠️ Observación de Ingeniería: El Problema del Bloqueo
-Durante las pruebas, se nota un pequeño retraso en la reacción del LED tras presionar el botón. 
+Durante la ejecución, se observa que al enviar mensajes largos por UART, el parpadeo del LED se **"congela"** momentáneamente.
 
-**Análisis del Cuello de Botella:**
-La función `Debug_Log` utiliza `HAL_UART_Transmit`, la cual es una función **bloqueante**. El procesador detiene toda ejecución (incluyendo la actualización del LED) hasta terminar de enviar cada carácter por el cable. Este fenómeno justifica la necesidad de evolucionar hacia **Drivers No Bloqueantes**, tema central del siguiente módulo en este repositorio.
+**Diagnóstico:** La función *Debug_Log* utiliza **HAL_UART_Transmit** en modo **Polling**, la cual es **bloqueante**. Mientras el CPU está ocupado enviando caracteres bit a bit por el cable, no puede evaluar la condición de tiempo del parpadeo ni leer el botón.
+
+* - Hacia el Nivel Intermedio: Este problema justifica la evolución hacia el uso de Interrupciones (IT) o DMA (Direct Memory Access) para que la comunicación serie ocurra en segundo plano sin afectar la latencia de la Máquina de Estados.
 
 ---
-
-### 📂 Cómo utilizar este ejemplo
-1. Conecte un pulsador entre **PB11** y **GND**.
-2. Abra un monitor serial (TeraTerm, PuTTY o el monitor de STM32CubeIDE) a **115200 bps**.
-3. Presione el botón y observe la consola para verificar las transiciones de la MEF.
-
----
-*En este proyecto nos introducimos al diseño de Máquinas de Estado Finita (MEF) para dar orden a la lógica y utilizamos la UART para monitorear el sistema. Sin embargo, notarás que al enviar mensajes largos, el LED "se congela" un instante. Esto sucede porque la función Debug_Log es bloqueante; mientras el CPU transmite datos, no puede procesar nada más. En el próximo nivel, aprenderemos a crear Drivers No Bloqueantes para que la comunicación y la lógica fluyan en paralelo.*
+*Una Máquina de Estados bien diseñada es la base de un sistema embebido determinista; el manejo de la telemetría es lo que nos permite certificar su correcto funcionamiento.*
