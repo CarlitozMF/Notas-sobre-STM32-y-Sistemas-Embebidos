@@ -61,7 +61,7 @@ El firmware está diseñado bajo un esquema de planificación cooperativa, donde
 
 El "cerebro" del proyecto es un planificador basado en una arquitectura orientada a tareas. Utiliza aritmética de tiempo para decidir cuándo ejecutar cada función, optimizando el uso de la CPU al eliminar funciones bloqueantes como `HAL_Delay()`.
 
-### Estructura de Tareas (`Task_t`)
+### 1. Estructura de Tareas (`Task_t`)
 Se define una estructura que permite gestionar cada tarea de forma independiente:
 
 ```c
@@ -72,7 +72,7 @@ typedef struct {
 } Task_t;
 ```
 
-### Tabla de Planificación
+### 2. Tabla de Planificación
 
 Las tareas se organizan con diferentes prioridades implícitas según su frecuencia:
 |   Tarea   |   Período |   Frecuencia  |   Propósito   |
@@ -90,25 +90,25 @@ Task_t taskTable[] = {
 };
 #define NUM_TASKS (sizeof(taskTable)/sizeof(Task_t)
 ```
-### 1. Task_Heartbeat (GPIO Toggle)
+    1. Task_Heartbeat (GPIO Toggle)
 Funciona como el monitor de salud del sistema.
 * Periférico: LED externo conectado al pin PB8 (usr_ledRojo).
 * Función: Realiza un toggle (cambio de estado) del pin en un intervalo largo (ej. 500ms).
 * Propósito: Si el LED deja de parpadear, indica que una de las otras tareas bloqueó el Kernel o hubo un fallo en el procesador.
 
-### 2. Task_Breathing (Timer 3 - PWM)
+    2. Task_Breathing (Timer 3 - PWM)
 Controla un LED para generar un efecto de "respiración".
 * Periférico: TIM3_CH4.
 * Lógica: Modifica el ciclo de trabajo de forma incremental en cada llamada, invirtiendo el sentido al alcanzar los límites (0-1000).
 * Frecuencia de ejecución: 20ms (típico para suavidad visual).
 
-### 3. Task_RGBHandler (Timer 4 - Multi-Channel PWM)
+    3. Task_RGBHandler (Timer 4 - Multi-Channel PWM)
 Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para un LED RGB.
 * Periférico: TIM4 (Canales 2, 3 y 4).
 * Funcionalidad:
-    1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
-    2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
-    3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
+        1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
+        2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
+        3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
 
 ### Ejecución del Planificador
 
