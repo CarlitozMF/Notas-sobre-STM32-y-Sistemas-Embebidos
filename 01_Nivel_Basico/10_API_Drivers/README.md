@@ -1,35 +1,43 @@
 # 10_API_Drivers: Multitarea Cooperativa y Abstracción 🏗️
 
-En este proyecto elevamos la complejidad del software para demostrar la potencia de la **programación modular**. El objetivo es transformar el código monolítico en componentes reutilizables, permitiendo gestionar múltiples periféricos de forma asíncrona.
+Este laboratorio eleva la complejidad del firmware para demostrar la potencia de la **programación modular**. El objetivo es transformar el código monolítico en componentes reutilizables (Drivers), permitiendo gestionar múltiples periféricos de forma asíncrona sobre la placa **Nucleo-F439ZI**.
 
-## 🧱 Arquitectura del Sistema: "Objetos" y Capas
-Hemos diseñado el software para que cada periférico sea una instancia independiente. Esto permite ejecutar tareas con diferentes bases de tiempo sin que una bloquee a la otra, creando un entorno de **multitarea cooperativa**.
+## 🧱 Arquitectura del Sistema: Capas y "Objetos"
 
-* **Capa de Aplicación (`main.c`)**: Solo se encarga de la lógica de alto nivel.
-* **Capa de Abstracción (`API_LED`, `API_Delay`)**: Oculta la complejidad de los registros y la HAL de ST.
+Hemos diseñado el software bajo un esquema de **Multitarea Cooperativa**. Cada periférico se trata como una "instancia" independiente, permitiendo que el CPU ejecute tareas con diferentes bases de tiempo sin que una bloquee a las demás.
 
-### Configuración de Tareas:
-- **LED Verde (usr_ledVerde)**: Latido rápido (250ms).
-- **LED Azul (usr_ledAzul)**: Latido medio (500ms).
-- **LED Rojo (usr_ledRojo)**: Latido lento (1000ms).
-- **UART (Debug)**: Reporte de estado del sistema cada 1 segundo.
+* **Capa de Aplicación (`main.c`)**: Orquesta la lógica de alto nivel y el flujo del sistema.
+* **Capa de Abstracción (`API_LED`, `API_Delay`)**: Oculta la complejidad de los registros y las funciones HAL de ST, exponiendo una interfaz humana y genérica.
 
-## 🛠️ Conceptos Clave Implementados
+
+
+### Configuración de Tareas Concurrentes:
+- **LED Verde (LD1)**: Latido de alta frecuencia (200ms).
+- **LED Azul (LD2)**: Latido de media frecuencia (500ms).
+- **LED Rojo (LD3)**: Latido de baja frecuencia (1000ms).
+- **UART (Telemetría)**: Reporte de estado del sistema cada 1 segundo.
+
+---
+
+## 🛠️ Conceptos de Ingeniería Implementados
 
 ### 1. Encapsulamiento con Estructuras
-En lugar de variables sueltas, agrupamos la información del periférico en `structs`. Esto permite manejar los 3 LEDs con las mismas funciones de la API, simplemente pasando una referencia diferente.
+En lugar de variables sueltas, agrupamos la información del periférico en `structs`. Esto permite manejar los 3 LEDs con las mismas funciones de la API, simplemente pasando una referencia diferente. Esto reduce drásticamente la duplicación de código y el uso de globales.
 
 ### 2. Paso por Referencia (Punteros)
-Las funciones de la API reciben punteros a las estructuras (`API_Delay_Read(delay_t * hdelay)`). Esto es eficiente en memoria y es el estándar en la industria para el desarrollo de drivers.
+Las funciones de la API reciben punteros a las estructuras (`delayRead(delay_t * hdelay)`). Esta técnica es el estándar en la industria para optimizar el uso de memoria RAM y permitir que una sola función modifique el estado interno de una instancia específica.
 
-### 3. Temporización No Bloqueante
-Sustituimos definitivamente `HAL_Delay()` por una lógica de consulta de Ticks (`API_Delay`). Esto permite que el CPU "salte" de una tarea a otra instantáneamente si el tiempo no se ha cumplido.
+### 3. Temporización No Bloqueante (Tick-Based)
+Sustituimos definitivamente `HAL_Delay()` por una lógica de consulta de Ticks basada en el contador `SysTick`. Esto permite que el CPU "salte" de una tarea a otra instantáneamente si el tiempo de una no se ha cumplido, manteniendo el sistema siempre responsivo.
+
+---
 
 ## 💻 El Corazón de la Multitarea
-Fijate cómo el `while(1)` se convierte en una lista de tareas clara y legible, gracias a la delegación de complejidad a los drivers:
+
+El bucle principal se transforma en un planificador de tareas legible y profesional, donde la complejidad operativa ha sido delegada a los drivers:
 
 ```c
-/* Definición de instancias (Objetos) */
+/* Definición de instancias (Objetos de Software) */
 delay_t delayL1, delayL2, delayL3;
 led_t ledV = {LD1_Port, LD1_Pin, false};
 led_t ledA = {LD2_Port, LD2_Pin, false};
@@ -38,23 +46,23 @@ led_t ledR = {LD3_Port, LD3_Pin, false};
 int main(void) {
     // ... Inicialización de Periféricos ...
 
-    /* Inicializamos cada timer con su propia base de tiempo */
+    /* Inicialización de timers con bases de tiempo independientes */
     delayInit(&delayL1, 200);
     delayInit(&delayL2, 500);
     delayInit(&delayL3, 1000);
 
     while (1) {
-        // Tarea 1: Control del LED Verde
+        // Tarea 1: Control asíncrono del LED Verde
         if (delayRead(&delayL1)) {
             API_LED_Toggle(&ledV);
         }
 
-        // Tarea 2: Control del LED Azul
+        // Tarea 2: Control asíncrono del LED Azul
         if (delayRead(&delayL2)) {
             API_LED_Toggle(&ledA);
         }
 
-        // Tarea 3: Control del LED Rojo + Mensaje UART
+        // Tarea 3: Control asíncrono del LED Rojo + Telemetría UART
         if (delayRead(&delayL3)) {
             API_LED_Toggle(&ledR);
             Debug_Log("SISTEMA OK: Ciclo de 1 segundo completado\r\n");
@@ -62,10 +70,12 @@ int main(void) {
     }
 }
 ```
+
 ## 🔍 ¿Qué estamos demostrando aquí?
-1. Reutilización: Usamos la misma lógica para tres propósitos distintos creando instancias de la estructura delay_t.
-2. Independencia: El parpadeo del LED Verde no se ve afectado por el tiempo del LED Rojo.
-3. Mantenibilidad: Si cambiamos el hardware de los LEDs, el while(1) permanece intacto; solo actualizamos la declaración de los objetos.
+
+* **Reutilización:** La misma lógica de delayRead sirve para N-instancias de tiempo sin escribir código extra.
+* **Independencia:** El parpadeo del LED Verde es inmune a la latencia de las tareas más lentas, garantizando un comportamiento determinista.
+* **Mantenibilidad:** Si el hardware cambia (ej: se reasignan pines), el while(1) permanece intacto; solo se actualiza la declaración de los objetos al inicio.
 
 ---
-*En este proyecto nos introducimos al uso de Drivers y Modularidad para organizar el código. Al utilizar etiquetas en el .ioc y encapsular la lógica en estructuras, logramos un código mucho más genérico.*
+*La modularidad es la herramienta que nos permite gestionar la complejidad; al abstraer el hardware, transformamos el silicio en un sistema flexible, escalable y profesional.*

@@ -77,7 +77,7 @@ Durante la ejecución, se observa que al enviar mensajes largos por UART, el par
 
 **Diagnóstico:** La función *Debug_Log* utiliza **HAL_UART_Transmit** en modo **Polling**, la cual es **bloqueante**. Mientras el CPU está ocupado enviando caracteres bit a bit por el cable, no puede evaluar la condición de tiempo del parpadeo ni leer el botón.
 
-* - Hacia el Nivel Intermedio: Este problema justifica la evolución hacia el uso de Interrupciones (IT) o DMA (Direct Memory Access) para que la comunicación serie ocurra en segundo plano sin afectar la latencia de la Máquina de Estados.
+* Hacia el Nivel Intermedio: Este problema justifica la evolución hacia el uso de Interrupciones (IT) o DMA (Direct Memory Access) para que la comunicación serie ocurra en segundo plano sin afectar la latencia de la Máquina de Estados.
 
 ---
 *Una Máquina de Estados bien diseñada es la base de un sistema embebido determinista; el manejo de la telemetría es lo que nos permite certificar su correcto funcionamiento.*
