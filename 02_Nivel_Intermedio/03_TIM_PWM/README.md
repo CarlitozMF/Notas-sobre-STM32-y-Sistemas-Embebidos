@@ -69,8 +69,8 @@ Controla un LED para generar un efecto de "respiración".
 Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para un LED RGB.
 * Periférico: TIM4 (Canales 1, 2 y 3).
 * Funcionalidad:
-        Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
-        Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
-        Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
+    1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
+    2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
+    3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
 
         
