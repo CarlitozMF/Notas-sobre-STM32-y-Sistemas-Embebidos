@@ -1,49 +1,54 @@
 # 05_GPIO_Input_Polling - Entradas Digitales y Debounce 🔘
 
-En este módulo aprendemos a leer señales externas (botones) utilizando la técnica de **Polling** y a manejar los problemas físicos inherentes a los interruptores mecánicos.
+Este módulo aborda la lectura de señales externas (periféricos de entrada) utilizando la técnica de **Polling** y la implementación de filtros para mitigar los problemas físicos inherentes a los interruptores mecánicos.
 
 ## 📍 Objetivos
-- Leer el estado de un pin de entrada con `HAL_GPIO_ReadPin`.
-- Comprender y solucionar el fenómeno del **Rebote (Bounce)**.
-- Implementar una lógica de control simple basada en el estado de un pulsador.
+- Configurar y leer pines en modo entrada con `HAL_GPIO_ReadPin`.
+- Comprender el fenómeno físico del **Rebote (Bounce)** y su impacto en sistemas de alta velocidad.
+- Implementar una lógica de control con **Software Debounce** y detección de flancos.
 
-## ⚡ El Problema: Rebote Mecánico (Bounce)
-Cuando presionas un botón, las láminas metálicas no hacen contacto de forma limpia. Durante unos pocos milisegundos, chocan y se separan varias veces antes de quedar fijas.
+---
 
-Para un microcontrolador que corre a MHz, estos rebotes parecen múltiples pulsaciones rápidas. Sin un sistema de **Debounce**, una sola presión del usuario podría encender y apagar un LED 10 veces seguidas.
+## ⚡ El Desafío Físico: Rebote Mecánico (Bounce)
+Al presionar un botón, las láminas metálicas internas vibran y chocan entre sí durante unos milisegundos antes de establecer un contacto estable. 
 
 
 
-## 🛠️ Técnica: Polling con Software Debounce
-El **Polling** consiste en preguntar constantemente dentro del bucle `while(1)` si el botón ha cambiado de estado. 
+Para una **STM32F439ZI** que ejecuta millones de instrucciones por segundo, estas vibraciones se interpretan como múltiples pulsaciones ultra rápidas. Sin un sistema de filtrado, una sola presión del usuario dispararía la lógica del programa decenas de veces de forma errática.
 
-Para limpiar la señal, aplicamos los siguientes pasos en el código:
-1. **Detección:** ¿Se presionó el botón?
-2. **Espera (Debounce):** Retraso de 20ms para ignorar los ruidos mecánicos.
-3. **Confirmación:** ¿Sigue presionado? Si es así, la pulsación es válida.
-4. **Antirrepetidor:** Esperar a que el usuario suelte el botón (`while` bloqueante) para evitar que la acción se repita infinitamente mientras el dedo sigue ahí.
+---
+
+## 🛠️ Metodología: Polling y Filtrado
+El **Polling** (muestreo) consiste en consultar cíclicamente el estado del registro `IDR` (Input Data Register) del GPIO. Para limpiar la señal, aplicamos un algoritmo de validación temporal:
+
+1. **Detección de Flanco:** Se detecta un cambio de estado en el pin.
+2. **Ventana de Confirmación (Debounce):** Se genera un retraso de ~20ms para ignorar el ruido transitorio.
+3. **Re-muestreo:** Se verifica si la señal sigue activa. Si es así, se considera una pulsación legítima.
+4. **Lazo de Espera (Antirrepetidor):** Se utiliza un bloqueo para esperar que el usuario suelte el botón, evitando que una pulsación larga se cuente como múltiples eventos.
 
 ## 💻 Implementación de Referencia
 
 ```c
-if (HAL_GPIO_ReadPin(GPIOC, USER_Btn_Pin) == GPIO_PIN_SET) 
+// Verificamos si el botón azul de la Nucleo (PC13) está presionado
+if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) 
 {
-    HAL_Delay(20); // Debounce
-    if (HAL_GPIO_ReadPin(GPIOC, USER_Btn_Pin) == GPIO_PIN_SET) 
+    HAL_Delay(20); // Ventana de Debounce por software
+    
+    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) 
     {
-        HAL_GPIO_TogglePin(GPIOB, LD1_Pin); // Acción: Cambiar LED
+        HAL_GPIO_TogglePin(GPIOB, LD1_Pin); // Ejecución de la acción
         
-        // Bloqueo hasta soltar: evita repetición no deseada
-        while (HAL_GPIO_ReadPin(GPIOC, USER_Btn_Pin) == GPIO_PIN_SET);
+        /* Bloqueo hasta soltar el pulsador */
+        // Evita que el código siga ejecutándose mientras el dedo permanece en el botón
+        while (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET);
     }
 }
 ```
+## ⚠️ Consideraciones
 
-## ⚠️ Consideraciones Técnicas
-
-- Resistencias Pull-Up / Pull-Down: Son necesarias para evitar que el pin quede en un "estado flotante" cuando el botón no está presionado. La Nucleo-F439ZI ya incluye estas resistencias en su diseño para el botón azul.
-
-- Limitación del Polling: Esta técnica consume ciclos de CPU constantemente. Si el while(1) tuviera procesos muy largos, podríamos "perdernos" el momento exacto en que el usuario presiona el botón. (Esto se soluciona en niveles avanzados mediante Interrupciones).
+* Estados Flotantes (Floating): Un pin de entrada nunca debe quedar "al aire". Si no hay una referencia de voltaje fija (VCC o GND), el ruido electromagnético ambiental provocará lecturas aleatorias. La Nucleo-F439ZI soluciona esto mediante resistencias de Pull-Down internas o externas.
+* Eficiencia del CPU: La técnica del while al final del código es efectiva pero bloqueante. Durante ese tiempo, el microcontrolador no puede procesar nada más (como actualizar un display o leer otro sensor).
+* Hacia el Nivel Intermedio: En etapas posteriores, reemplazaremos este esquema por Interrupciones Externas (EXTI) para lograr una respuesta inmediata y no bloqueante.
 
 ---
-*Notas sobre interfaces de usuario y control de entradas para STM32.*
+*En sistemas embebidos, el software debe ser capaz de filtrar la imperfección del mundo físico para transformarla en lógica digital confiable.*
