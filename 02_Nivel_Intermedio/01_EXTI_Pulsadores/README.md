@@ -1,106 +1,82 @@
-# 01_EXTI_Pulsadores: Contador de 3 Dígitos con Control EXTI 📑
+# 01_EXTI_Pulsadores: Contador de 3 Dígitos y Gestión de Eventos Asíncronos 📑
 
-Este proyecto implementa un contador digital de 0 a 999 sobre tres displays de 7 segmentos multiplexados, **integrando interrupciones externas** para el control de flujo.
+Este proyecto implementa un contador digital de 0 a 999 sobre una matriz de tres displays de 7 segmentos multiplexados, integrando por primera vez **Interrupciones Externas (EXTI)** para el control de flujo en tiempo real.
 
-# 🚀 Características
+## 🎯 Objetivos
+- **Comprender el funcionamiento del NVIC** (Nested Vectored Interrupt Controller) para la gestión de prioridades de hardware.
+- **Implementar funciones de Callback** para responder a eventos externos de forma asíncrona.
+- **Diferenciar el procesamiento reactivo (EXTI)** del sondeo constante (*Polling*).
+- **Aplicar técnicas de acondicionamiento de señal** (Filtro RC) para resolver problemas de rebote mecánico (*Bounce*).
 
-- Multiplexación por División de Tiempo: Control de 3 dígitos con bus compartido.
-- Tiempo No Bloqueante: Uso de HAL_GetTick() para el avance del contador.
-- Control por Interrupciones (EXTI):
-    1. Botón Reset: Reinicio instantáneo a 000.
-    2. Botón Pause/Play: Congela/Reanuda el conteo.
-    3. Filtrado de Hardware: Uso de capacitores de 100nF para eliminar el bounce mecánico.
+---
 
-# 🛠️ Configuración de Hardware
+## 🚀 Características Técnicas
+- **Multiplexación por División de Tiempo (TDM):** Control eficiente de 3 dígitos mediante bus de datos compartido.
+- **Concurrencia Básica:** Uso de `HAL_GetTick()` para el avance del tiempo sin detener el barrido visual.
+- **Control Reactivo (EXTI):**
+    1. **Reset Inmediato:** Reinicio a 000 con prioridad de hardware.
+    2. **Control de Flujo (Pause/Play):** Congelación y reanudación del proceso lógico.
+- **Acondicionamiento de Señal:** Filtrado analógico (Hardware Debounce) para ISRs limpias.
 
-- Displays: 3x 7-Segmentos (Cátodo Común).
-- Pines de Datos: SEG_A a SEG_G (GPIO Output).
-- Pines de Control: EN1, EN2, EN3 (Transistores NPN).
-- Pin de Salida Led: usr_led
-- Botones Externos: Conectados a GND con configuración Pull-Up interna.
-    1. btn_rst (PB10) - Falling Edge.
-    2. btn_pp (PB11) - Falling Edge.
+---
 
-## 📌 Asignación de Pines (Pinout)
+## 🛠️ Configuración de Hardware y Pinout
 
-| Componente | Pin STM32 | Etiqueta (User Label) | Modo GPIO |
-| :--- | :--- | :--- | :--- |
-| Segmento A | PB8 | `SEG_A` | Output Push-Pull |
-| Segmento B | PB9 | `SEG_B` | Output Push-Pull |
-| Segmento C | PA5| `SEG_C` | Output Push-Pull |
-| Segmento D | PA6 | `SEG_D` | Output Push-Pull |
-| Segmento E | PA7 | `SEG_E` | Output Push-Pull |
-| Segmento F | PD14 | `SEG_F` | Output Push-Pull |
-| Segmento G | PD15 | `SEG_G` | Output Push-Pull |
-| Habilitador 1 | PC8 | `EN1` | Output Push-Pull |
-| Habilitador 2 | PC9 | `EN2` | Output Push-Pull |
-| Habilitador 3 | PC10 | `EN3` | Output Push-Pull |
-| Led Usuario | PF13 | `usr_led` | Output Push-Pull |
-| Botón Reset | PB10 | `btn_rst` | EXTI (Falling Edge) |
-| Botón Pause | PB11 | `btn_pp` | EXTI (Falling Edge) |
+Se utilizan etiquetas personalizadas (**User Labels**) en el archivo `.ioc` para garantizar que el código sea independiente de los cambios físicos en el PCB.
 
-# 🧠 Lógica de Software
+| Periférico | Pin | Etiqueta | Modo GPIO | Función |
+| :--- | :--- | :--- | :--- | :--- |
+| **Segmentos** | PB8-PD15 | `SEG_A`..`SEG_G` | Output | Bus de datos paralelo |
+| **Habilitadores**| PC8-PC10 | `EN1`..`EN3` | Output | Control de transistores NPN |
+| **Reset** | PB10 | `btn_rst` | **EXTI** | Detección Falling Edge |
+| **Pause/Play** | PB11 | `btn_pp` | **EXTI** | Detección Falling Edge |
 
-El sistema utiliza el NVIC para priorizar las acciones de los botones sobre el bucle principal. Gracias a los capacitores físicos, el código de la ISR (Interrupt Service Routine) permanece limpio y sin necesidad de delays por software.
+---
 
-## 🔄 Flujo de Control
-El sistema opera bajo dos estados principales controlados por la interrupción del botón de pausa:
-- **Estado PLAY:** El contador incrementa cada 100ms validando la diferencia de `HAL_GetTick()`.
-- **Estado PAUSE:** El incremento se detiene, pero la función de barrido `DisplayMux_Scan()` se sigue ejecutando para mantener la persistencia visual de los últimos datos.
+## ⚡ Solución al Rebote: Debounce por Hardware
+En sistemas basados en interrupciones, el ruido mecánico de un pulsador es crítico, ya que dispararía la ISR múltiples veces en microsegundos. Para mantener una **ISR limpia y eficiente**, se implementó un filtro RC:
+1. **Pull-Up Interna:** Garantiza un estado lógico '1' estable.
+2. **Capacitor de 100nF:** Actúa como un filtro pasa-bajos, absorbiendo los transitorios del contacto mecánico.
+Esto permite que el Callback se ejecute exactamente una vez por pulsación, eliminando la necesidad de delays bloqueantes dentro del código de interrupción.
 
-## ⚡ Solución al Rebote (Debounce) Hardware
-Para evitar disparos múltiples de la interrupción EXTI, se implementó un filtro RC básico:
-1. Se activó la resistencia de **Pull-Up interna** del STM32.
-2. Se colocó un **capacitor de 100nF** en paralelo con cada pulsador.
-Esta configuración actúa como un filtro pasa-bajos que elimina el ruido mecánico del pulsador, permitiendo que la ISR se ejecute exactamente una vez por cada pulsación real.
+---
 
-## 🕹️ Instrucciones de Uso
-1. Al iniciar, el contador comenzará automáticamente de 000 a 999.
-2. Presione `BTN_PAUSE` para congelar el tiempo. El LED azul de la placa indicará el estado de pausa.
-3. Presione `BTN_RESET` en cualquier momento para volver el conteo a 000.
+## 🧠 Arquitectura de Software: El Callback
 
-# Notas sobre Interrupciones Externas "El Callback"
+El sistema utiliza el **NVIC (Nested Vectored Interrupt Controller)** para priorizar las acciones de los botones sobre el bucle principal. 
 
-## 🧠 ¿Qué es realmente el Callback?
-
-En la arquitectura de ST, el hardware salta primero a un archivo llamado stm32fxx_it.c (donde están las ISR reales). Esas funciones son cortas y llaman a una función general de la HAL (HAL_GPIO_EXTI_IRQHandler).
-Esa función de la HAL hace el trabajo sucio: limpia las banderas de interrupción (para que no se repitan) y finalmente llama al Callback.
-- Dato Clave: El Callback está definido como una función __weak (débil). Esto significa que la HAL tiene una versión vacía, pero si vos escribís una con el mismo nombre en tu main.c, el compilador usa la tuya. Es como un "enchufe" esperando que conectes tu lógica.
-
-## 🚦 Manejo de múltiples EXTI en el mismo Callback
-A diferencia de otros periféricos, todas las interrupciones de GPIO (sin importar si es el pin 0 o el 15) terminan en la misma función de Callback. Por eso es obligatorio usar el parámetro GPIO_Pin para identificar quién llamó. Para este ejemplo el callback es el que sigue:
+### ¿Qué es realmente el Callback?
+En la arquitectura de ST, el hardware salta a una ISR genérica en `stm32fxx_it.c`. La HAL gestiona la limpieza de banderas (*flags*) y finalmente invoca a la función `HAL_GPIO_EXTI_Callback`.
+> **Dato de Ingeniería:** Esta función está definida como `__weak`. Esto permite que el programador la redefina en el `main.c`, actuando como un "enchufe" donde conectamos nuestra lógica de respuesta.
 
 ```c
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    // BOTÓN DE RESET
-    if (GPIO_Pin == btn_rst_Pin)
-    {
+    /* Identificación del origen de la interrupción */
+    if (GPIO_Pin == btn_rst_Pin) {
         contador_global = 0;
-        valores_display[0] = 0;
-        valores_display[1] = 0;
-        valores_display[2] = 0;
+        memset(valores_display, 0, sizeof(valores_display)); // Limpieza de buffer
     }
 
-    // BOTÓN DE PAUSE / PLAY
-    if (GPIO_Pin == btn_pp_Pin)
-    {
-        pausa_activada = !pausa_activada; // Cambia el estado (Toggle)
-        HAL_GPIO_TogglePin(usr_led_GPIO_Port, usr_led_Pin); // LED azul para indicar pausa
+    if (GPIO_Pin == btn_pp_Pin) {
+        pausa_activada = !pausa_activada; // Toggle de estado lógico
+        HAL_GPIO_TogglePin(usr_led_GPIO_Port, usr_led_Pin); 
     }
 }
 ```
-# ⚠️ Reglas de Oro para el Callback
+## ⚠️ Reglas de Oro para ISR (Interrupt Service Routines)
 
-Para que tu código sea estable, el Callback debe respetar estas tres leyes:
+Para garantizar la estabilidad del sistema, el Callback debe seguir estas leyes fundamentales:
 
-1. Brevedad Extrema: El microcontrolador detiene todo el programa (incluyendo el barrido de tus displays) mientras está dentro del Callback. Si hacés cálculos largos o ponés un HAL_Delay, el display va a parpadear o el sistema se va a colgar.
-2. No usar bloqueantes: Nunca uses HAL_Delay() ni funciones que esperen a que algo pase (como recibir un dato de UART).
-3. Banderas (Flags): Si el botón debe disparar algo complejo (como escribir en una tarjeta SD o calcular una raíz cuadrada), hacé esto:
-    1. En el Callback: Ponés una variable ejecutar_tarea = 1;.
-    2. En el while(1): Preguntás if(ejecutar_tarea) y hacés el trabajo pesado ahí.
+* **Brevedad Extrema:** El microcontrolador detiene el `while(1)` (y por ende, tu barrido de displays) mientras está en el Callback.
+* **No Bloqueante:** Está estrictamente prohibido usar `HAL_Delay()` o funciones de espera.
+* **Uso de Flags:** Para tareas pesadas (UART, Cálculos), solo se debe activar una bandera en el Callback y procesarla en el bucle principal.
+
+## 🔍 Observación
+
+Aunque el control es reactivo, la persistencia visual `(DisplayMux_Scan)` todavía depende de la velocidad del CPU en el `while(1)`. Si el procesador se ocupa en una tarea pesada, el display **parpadeará**.
+
+**Próximo Desafío:** Independizar el barrido mediante **Timers**, logrando un hardware autónomo que no dependa de la carga del software principal.
 
 ---
-*En este proyecto dimos el salto al Nivel Intermedio introduciendo el uso de etiquetas (User Labels) en el .ioc, lo que nos permite escribir un código más genérico, legible y fácil de migrar entre diferentes pines.*
-*Sin embargo, es importante notar que la función Display_Mux_Scan() todavía vive en el bucle principal (while(1)). Esto significa que la persistencia visual del display depende totalmente de la velocidad del CPU: si el procesador se ocupa en una tarea pesada o bloqueante, el barrido se detendrá y el display parpadeará.*
-*El siguiente desafío será independizar el hardware mediante el uso de Timers, logrando que el display sea totalmente autónomo.*
+*“Módulo de Nivel Intermedio: Transición hacia una arquitectura orientada a eventos y gestión de latencia. El uso de EXTI es el primer paso para transformar un programa secuencial en un sistema embebido profesional de respuesta inmediata.”*
