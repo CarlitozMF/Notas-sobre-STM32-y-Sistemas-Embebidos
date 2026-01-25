@@ -52,4 +52,5 @@ Implementación de canales de comunicación para monitorear variables internas y
 
 ---
 
-# **🏁 NIVEL BÁSICO COMPLETADO.** *Los cimientos están listos. El sistema ya es capaz de gestionar lógica compleja de forma asíncrona mediante Polling. El siguiente paso es el **Nivel Intermedio**, donde introduciremos **Interrupciones (EXTI)** y **Timers por Hardware** para alcanzar una respuesta en tiempo real determinística y eficiencia energética superior.*
+# **🏁 NIVEL BÁSICO COMPLETADO.** 
+**Los cimientos están listos. El sistema ya es capaz de gestionar lógica compleja de forma asíncrona mediante Polling.**
