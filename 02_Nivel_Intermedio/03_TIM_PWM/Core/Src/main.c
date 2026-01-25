@@ -127,7 +127,7 @@ void Tarea_LED_Breathing(void) {
 		fade_step = 5;
 	}
 
-	// Escribimos directamente en el registro de comparación del Timer 3 Canal 1
+	// Escribimos directamente en el registro de comparación del Timer 3 Canal 4
 	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, pwm_duty);
 }
 

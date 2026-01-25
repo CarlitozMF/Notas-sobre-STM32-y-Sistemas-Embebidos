@@ -36,11 +36,6 @@ La resolución (o precisión del control) está ligada directamente al valor del
 > * **PSC = 179**
 > * **ARR = 999**
 
-**Configuración aplicada:**
-* **Resolución:** 1000 pasos (ARR = 999).
-* **Frecuencia de conteo:** 1 MHz (PSC ajustado según bus APB).
-* **Resultado:** Señal de 1 kHz con precisión del 0.1% en el Duty Cycle.
-
 ### 3. Configuración en STM32CubeMX
 Para replicar el comportamiento, los periféricos **TIM3** y **TIM4** deben configurarse con los siguientes parámetros:
 
@@ -60,14 +55,13 @@ El driver realiza escritura directa en memoria mediante macros de la HAL, permit
 __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, valor_pwm);
 ```
 
-## 🚀 Características Principales
-* **Planificador de Tareas (Kernel Cooperativo):** Gestión de hilos de ejecución basada en aritmética de tiempos con `HAL_GetTick()`, evitando el uso de funciones bloqueantes.
-* **Breathing LED (TIM3):** Efecto de "respiración" analógica mediante modulación PWM en el Canal 4 del Timer 3.
-* **Driver RGB Encapsulado (TIM4):** Controlador modular con soporte para:
-    * Arquitecturas de Ánodo y Cátodo común.
-    * **Corrección Gamma (2.2):** Ajuste logarítmico para una percepción visual natural.
-    * **Modelo de Color HSV:** Transiciones de color suaves mediante Tono, Saturación y Brillo.
-* **Monitor de Estado (Heartbeat):** LED de señalización mediante Toggle para monitorear la salud del planificador.
+## 🚀 Arquitectura del Sistema
 
----
+El firmware está diseñado bajo un esquema de planificación cooperativa, donde cada tarea se ejecuta en intervalos de tiempo predefinidos sin bloquear el procesador. Esto garantiza que el control de los periféricos sea fluido y estable.
 
+1. Task_Breathing (Timer 3 - PWM)
+
+Controla un LED monocolor para generar un efecto de "respiración".
+* Periférico: TIM3_CH4.
+* Lógica: Modifica el ciclo de trabajo de forma incremental en cada llamada, invirtiendo el sentido al alcanzar los límites (0-1000).
+* Frecuencia de ejecución: 20ms (típico para suavidad visual).
