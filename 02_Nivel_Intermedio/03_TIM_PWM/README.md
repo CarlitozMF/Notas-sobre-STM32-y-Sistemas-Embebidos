@@ -1,8 +1,14 @@
 # 03_TIM_PWM: Dominando la energía: del control binario a la modulación por ancho de pulso (PWM) 
 
-Este proyecto documenta el uso de **Timers** de hardware para crear modulación por ancho de pulsos (inglés Pulse width Modulation PWM) de una señal modificando el ciclo de trabajo de una señal periódica, para controlar la cantidad de energía que se envía a una carga con la **Nucleo-F439ZI**.
+Este proyecto documenta el uso de los **Timers de hardware** para generar señales de Modulación por Ancho de Pulso (**PWM**). El objetivo es controlar la entrega de energía a periféricos de potencia de forma eficiente y asíncrona mediante la **Nucleo-F439ZI**, integrando un **Planificador Cooperativo (Scheduler)** para la gestión de tareas concurrentes.
 
-Se implementa un **Planificador Cooperativo (Scheduler)** no bloqueante, diseñado para gestionar múltiples periféricos de potencia de forma concurrente. El sistema integra efectos visuales avanzados, control de registros a bajo nivel y una arquitectura de software modular para el aprendizaje de Timers y PWM.
+## 🎯 Objetivos
+- **Dominar la generación de señales PWM** mediante los registros de comparación (CCR) de los Timers.
+- **Implementar un Kernel Cooperativo** no bloqueante para la gestión de múltiples tareas (*Tasks*).
+- **Aplicar conceptos de colorimetría** (Modelo HSV y Corrección Gamma) para el control avanzado de LEDs RGB.
+- **Calcular la resolución y frecuencia** del PWM para optimizar el control de potencia y evitar el parpadeo visual (*Flicker*).
+
+---
 
 ## 🔩 Teoría de Operación: Timers y PWM
 
@@ -138,5 +144,4 @@ Este proyecto representa:
 - La implementación del **Planificador Cooperativo** demuestra que la eficiencia no depende de la velocidad del reloj, sino de la arquitectura del código. Al eliminar el uso de funciones bloqueantes, permitimos que el hardware de la **STM32F439ZI** despliegue su verdadero potencial multitarea.
 
 ---
-*Con este flujo de trabajo dominado, estamos listos para el siguiente nivel de los Timers: la captura de señales externas y la medición de tiempos de alta precisión.*
-        
+*Nivel Intermedio: Desacoplamiento del software y optimización del CPU mediante hardware reactivo. El PWM es el puente definitivo entre el mundo digital del microcontrolador y la potencia del mundo físico.*
