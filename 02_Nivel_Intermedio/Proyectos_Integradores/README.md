@@ -22,7 +22,7 @@ Los proyectos integrados en esta sección demuestran que es posible alcanzar un 
 
 | Proyecto | Descripción | Hito de Ingeniería |
 | :--- | :--- | :--- |
-| **[01. Contador_Displays_7Seg](./01_Contador_Displys_7Seg)** | Contador de 4 dígitos con refresco automático por Timer. | *Zero-Flicker Display via Hardware Timers.* |
+| **[01. Contador_Displays_7Seg](./01_Contador_Displys_7Seg)** | Contador de 3 dígitos con refresco automático por Timer. | *Zero-Flicker Display via Hardware Timers.* |
 
 ---
 
