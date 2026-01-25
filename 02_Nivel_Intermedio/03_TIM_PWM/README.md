@@ -27,8 +27,6 @@ $$f_{pwm} = \frac{f_{clk}}{(PSC + 1) \cdot (ARR + 1)}$$
 * **PSC (Prescaler):** Registro de 16 bits que divide la frecuencia de entrada. Se le suma `1` en la fórmula porque el conteo es base cero.
 * **ARR (Auto-Reload Register):** Conocido como *Counter Period*. Define el valor máximo del contador y, por ende, la resolución del Duty Cycle.
 
-
-
 #### Resolución del Duty Cycle
 La resolución (o precisión del control) está ligada directamente al valor del **ARR**. Un valor de $ARR = 999$ proporciona una resolución de **1000 niveles** (0.1% por paso), mientras que un $ARR = 65535$ maximiza la precisión en Timers de 16 bits.
 
@@ -59,7 +57,7 @@ __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, valor_pwm);
 
 El firmware está diseñado bajo un esquema de planificación cooperativa, donde cada tarea se ejecuta en intervalos de tiempo predefinidos sin bloquear el procesador. Esto garantiza que el control de los periféricos sea fluido y estable.
 
-1. Task_Breathing (Timer 3 - PWM)
+### 1. Task_Breathing (Timer 3 - PWM)
 
 Controla un LED monocolor para generar un efecto de "respiración".
 * Periférico: TIM3_CH4.
