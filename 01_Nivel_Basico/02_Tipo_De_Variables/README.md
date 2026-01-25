@@ -1,74 +1,81 @@
-# 02_Tipo_De_Variables - Tipos de Datos y Memoria 🧠
+# 02_Tipo_De_Variables - Tipos de Datos y Gestión de Memoria 🧠
 
-Este módulo se centra en entender cómo el microcontrolador gestiona la memoria RAM y cómo elegir el tipo de dato correcto para optimizar recursos y evitar errores críticos.
+Este módulo analiza cómo el microcontrolador gestiona la memoria RAM y la importancia crítica de elegir el tipo de dato correcto para optimizar recursos y asegurar la robustez del sistema en una arquitectura **ARM Cortex-M4 (32-bit)** como la de la **Nucleo-F439ZI**.
 
 ## 📍 Objetivos
-- Verificar el tamaño real de los tipos de datos en una arquitectura **ARM Cortex-M4 (32-bit)**.
-- Implementar una función de abstracción para telemetría (`Debug_Log`).
-- Observar y documentar el fenómeno de **Overflow** (desbordamiento).
+- Verificar el tamaño real de los datos en una arquitectura de 32 bits.
+- Implementar una capa de abstracción para telemetría vía UART (`Debug_Log`).
+- Documentar y mitigar el fenómeno de **Overflow** (desbordamiento aritmético).
+
+---
 
 ## 📊 Tipos de Datos en Sistemas Embebidos
-En lugar de usar `int` o `long`, utilizamos la librería `<stdint.h>` para asegurar la portabilidad del código entre diferentes arquitecturas.
+En sistemas profesionales, abandonamos el uso de `int` o `long` (cuyo tamaño depende del compilador) y adoptamos la librería `<stdint.h>` para garantizar la **portabilidad** absoluta entre diferentes arquitecturas.
 
-| Tipo de Dato | Tamaño (sizeof) | Rango de Valores | Uso Común |
+| Tipo de Dato | Tamaño (Bytes) | Rango de Valores | Aplicación Típica |
 | :--- | :--- | :--- | :--- |
-| `uint8_t` | 1 Byte | 0 a 255 | Banderas, estados lógicos, buffers. |
-| `uint16_t` | 2 Bytes | 0 a 65,535 | Valores de ADC, contadores de Timers. |
-| `uint32_t` | 4 Bytes | 0 a 4,294,967,295 | Marcas de tiempo (`HAL_GetTick()`). |
-| `float` | 4 Bytes | Decimales | Cálculos de sensores analógicos. |
+| **`uint8_t`** | 1 | 0 a 255 | Banderas (flags), estados de MEF, buffers de comunicación. |
+| **`uint16_t`** | 2 | 0 a 65,535 | Resolución de ADC (12-bit), registros de Timer (16-bit). |
+| **`uint32_t`** | 4 | 0 a 4,294,967,295 | Marcas de tiempo (`HAL_GetTick()`), direcciones de memoria. |
+| **`float`** | 4 | ±1.18e-38 a ±3.4e38 | Procesamiento de señales (la F439ZI tiene FPU integrada). |
 
-## 📊 Tabla de Especificadores de Formato (printf/sprintf)
-Para mostrar datos por consola, debemos indicar al compilador cómo interpretar los bytes. Usar el especificador incorrecto puede generar datos erróneos o *Warnings*.
+---
 
-| Especificador | Tipo de Dato C | Descripción |
+## 📊 Tabla de Especificadores de Formato (`printf`/`sprintf`)
+
+Para la telemetría por consola, debemos ser estrictos con el compilador. Usar el especificador incorrecto puede generar datos erróneos o *Warnings* de compilación.
+
+| Especificador | Tipo de Dato C | Descripción Técnica |
 | :--- | :--- | :--- |
-| `%u` | `uint8_t`, `uint16_t` | Entero sin signo (pequeño). |
-| `%d` | `int8_t`, `int16_t` | Entero con signo. |
-| **`%lu`** | **`uint32_t`** | **Unsigned Long**: Indispensable para `HAL_GetTick()`. |
-| **`%zu`** | **`size_t`** | Especificador estándar para el operador `sizeof`. |
-| `%f` | `float` | Punto flotante (decimales). |
-| `%x` / `%X` | `uint32_t` | Valor en **Hexadecimal** (ideal para debugear registros). |
-| `%p` | `void*` | Dirección de memoria (Puntero). |
+| **`%u`** | `uint16_t` | Entero sin signo de 16 bits. |
+| **`%d`** | `int16_t` | Entero con signo de 16 bits. |
+| **`%lu`** | **`uint32_t`** | **Long Unsigned**: Obligatorio para variables de tiempo (`HAL_GetTick()`). |
+| **`%zu`** | **`size_t`** | El estándar para el operador `sizeof`. Evita errores de portabilidad. |
+| **`%f`** | `float` | Punto flotante (requiere activar el soporte en el IDE). |
+| **`%x` / `%X`** | `uint32_t` | Representación **Hexadecimal**. Esencial para leer registros de periféricos. |
+| **`%p`** | `void*` | Dirección de memoria (Puntero). Útil para verificar la ubicación en RAM. |
 
-## 🔧 Solución de Problemas: Soporte para Floats
-Al usar `sprintf` con variables tipo `float` en STM32CubeIDE, es posible que no se muestren los datos o se reciba un error. 
-**Solución:**
-1. Ir a `Project Properties` > `C/C++ Build` > `Settings`.
-2. En `Tool Settings` > `MCU Settings`, marcar la casilla: **"Use float with printf from newlib-nano (-u _printf_float)"**.
+---
+
+## 🔧 Configuración: Soporte para Punto Flotante
+Por defecto, la librería *newlib-nano* de STM32CubeIDE no incluye soporte para imprimir `floats` para ahorrar memoria Flash. 
+
+**Para activarlo:**
+1. Click derecho en el proyecto > `Properties`.
+2. `C/C++ Build` > `Settings` > `Tool Settings`.
+3. `MCU Settings` > Marcar la casilla: **"Use float with printf from newlib-nano (-u _printf_float)"**.
+
+---
+
+## ⚠️ El Fenómeno del Overflow (Aritmética Circular)
+En sistemas embebidos, los registros tienen límites físicos. Cuando una variable supera su valor máximo, ocurre un desbordamiento.
 
 
-## ⚠️ El Fenómeno del Overflow
-En este ejemplo, observamos qué sucede cuando una variable supera su valor máximo permitido por su tamaño de bits:
-- Un `uint8_t` que vale **255** y recibe un incremento (`++`), vuelve automáticamente a **0**.
-- **Impacto:** Si se usa un tipo de dato pequeño para una variable que crece constantemente (como el tiempo), el sistema fallará o tendrá comportamientos erráticos al "dar la vuelta".
 
-## 📏 La Importancia de sizeof en Sistemas Embebidos
+* **Comportamiento:** Si un `uint8_t` vale **255** y recibe un incremento (`++`), vuelve automáticamente a **0**.
+* **Peligro Crítico:** Si utilizas un tipo de dato pequeño para una marca de tiempo que crece constantemente, el sistema fallará o tendrá comportamientos erráticos al "dar la vuelta". Siempre se debe dimensionar la variable para el escenario del peor caso (*Worst Case Scenario*).
 
-💡 Breve Explicación Técnica
+---
 
-sizeof es un operador en tiempo de compilación. Esto significa que no consume ciclos de reloj del procesador mientras tu programa corre; el compilador calcula el tamaño y sustituye el sizeof por el número constante antes de grabar el código en la memoria Flash del microcontrolador.
+## 📏 El Operador `sizeof` y el tipo `size_t`
 
-El uso de sizeof es una de las mejores prácticas en la programación de microcontroladores por tres razones fundamentales:
+El uso de `sizeof` no es opcional en código de alta calidad. Es un operador que se evalúa en **tiempo de compilación**, por lo que no consume ciclos de reloj del procesador.
 
-- Portabilidad del Código: A diferencia de la programación en PC, en el mundo de los sistemas embebidos el tamaño de un int o un long no es estándar; depende de la arquitectura del procesador (8, 16, 32 o 64 bits). sizeof permite que el código se adapte automáticamente al hardware donde se compila.
+1. **Cálculo de Arreglos:** Permite determinar el número de elementos de forma dinámica:
+   `uint8_t num_elementos = sizeof(mi_arreglo) / sizeof(mi_arreglo[0]);`
+2. **Seguridad en Buffers:** Al usar funciones como `HAL_UART_Transmit`, siempre usamos `sizeof` para evitar leer memoria fuera de los límites (Buffer Overflow).
+3. **Portabilidad:** `sizeof` devuelve un `size_t`, adaptándose automáticamente si el microcontrolador es de 8, 16 o 32 bits.
 
-- Seguridad en el Manejo de Buffers: Cuando usamos funciones como HAL_UART_Transmit o memcpy, necesitamos indicar cuántos bytes vamos a procesar. Usar sizeof(mi_variable) en lugar de un número fijo (como "4") evita errores de desbordamiento de memoria (Buffer Overflow) si en el futuro decidimos cambiar el tipo de la variable.
+---
 
-- Cálculo de Elementos en Arreglos: Es la forma más segura de saber cuántos elementos tiene un arreglo sin contarlos a mano: int num_elementos = sizeof(mi_arreglo) / sizeof(mi_arreglo[0]);
-
-El operador `sizeof` devuelve un tipo de dato llamado `size_t`. 
-- **Por qué usarlo:** Permite que el código sea portable. No importa si el micro es de 8 o 32 bits, `sizeof` siempre devolverá el tamaño correcto.
-- **En el código:** Al imprimirlo, lo ideal es usar `%zu` o `%lu` para evitar que el compilador emita advertencias sobre el tamaño de los argumentos.
-
-## 🛠️ Herramientas de Desarrollo
-### Abstracción: `Debug_Log`
-Se implementó una función personalizada para simplificar el envío de datos por la **UART3** (conectada al puerto USB de la Nucleo-F439ZI).
+## 🛠️ Herramientas de Telemetría: `Debug_Log`
+Se implementó una función personalizada para simplificar el envío de datos por la **UART3** (Virtual COM Port de la Nucleo), actuando como una capa de abstracción sobre la HAL.
 
 ```c
 void Debug_Log(const char *msg) {
-    HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
+    // Envío de cadena de texto mediante punteros y cálculo de longitud dinámica
+    HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 }
 ```
-
----
-*Notas sobre las variables usadas en el desarrollo de aplicaciones orientadas a los sistemas embebidos*
+ ---
+ *Notas creadas durante el estudio de gestión eficiente de recursos*
