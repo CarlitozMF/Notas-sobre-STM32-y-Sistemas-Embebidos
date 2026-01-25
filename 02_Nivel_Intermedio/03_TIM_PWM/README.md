@@ -7,20 +7,34 @@ Se implementa un **Planificador Cooperativo (Scheduler)** no bloqueante, diseña
 ## 🔩 Teoría de Operación: Timers y PWM
 
 ### 1. Conceptos Fundamentales de PWM
-El modo **PWM (Pulse Width Modulation)** permite emular una señal analógica variando el ancho de un pulso digital. Se utiliza para controlar la potencia entregada a los LEDs mediante la manipulación de tres registros clave del Timer:
-* **Periodo (ARR):** Define el ciclo total de la señal.
-* **Duty Cycle (CCR):** Define el tiempo que la señal permanece en estado ALTO.
-* **Frecuencia ($f_{pwm}$):** Velocidad de conmutación (1 kHz para evitar *flicker*).
+
+El modo PWM (Modulación por Ancho de Pulso) emula un voltaje analógico variable mediante la conmutación rápida de una señal digital. Su comportamiento en los Timers de STM32 se rige por tres parámetros críticos:
+
+* **Periodo (ARR - Auto-Reload Register):** Es el valor máximo del contador. Define la duración total de un ciclo y, junto con el reloj del sistema, determina la frecuencia.
+* **Duty Cycle (CCR - Capture Compare Register):** Define el "ancho" del pulso. Es el valor contra el cual se compara el contador para conmutar la salida entre estado ALTO y BAJO.
+* **Frecuencia (fpwm​):** Es la inversa del periodo. Para control de LEDs, se utiliza una f≥1 kHz para eliminar el flicker (parpadeo) perceptible por el ojo humano.
 
 ### 2. Cálculo de Frecuencia y Resolución
-La frecuencia se determina mediante la relación entre el reloj del sistema ($f_{clk}$) y los divisores del Timer:
+
+La frecuencia de la señal PWM está determinada por la frecuencia de reloj del periférico ($f_{clk}$) y la configuración de los divisores del Timer. La relación matemática es:
 
 $$f_{pwm} = \frac{f_{clk}}{(PSC + 1) \cdot (ARR + 1)}$$
 
-Donde:
-* fclk​: Es la frecuencia del reloj que alimenta al Timer (en una F439ZI, suele ser 90MHz o 180MHz dependiendo de qué bus APB use el Timer).
-* PSC (Prescaler): Divisor previo para "ralentizar" el reloj.
-* ARR (Auto-Reload Register): Es el "Counter Period". Define cuántos pasos cuenta el timer antes de volver a cero.
+#### Parámetros de Configuración:
+
+* **$f_{clk}$ (Timer Clock):** Frecuencia de entrada al Timer. En la **STM32F439ZI**, esta frecuencia depende del bus al que está conectado el Timer (APB1 o APB2). Si el divisor del bus es mayor a 1, el reloj del Timer se multiplica automáticamente por 2.
+    * *Ejemplo:* Con el sistema a 180 MHz, los Timers en APB2 suelen correr a **180 MHz**.
+* **PSC (Prescaler):** Registro de 16 bits que divide la frecuencia de entrada. Se le suma `1` en la fórmula porque el conteo es base cero.
+* **ARR (Auto-Reload Register):** Conocido como *Counter Period*. Define el valor máximo del contador y, por ende, la resolución del Duty Cycle.
+
+
+
+#### Resolución del Duty Cycle
+La resolución (o precisión del control) está ligada directamente al valor del **ARR**. Un valor de $ARR = 999$ proporciona una resolución de **1000 niveles** (0.1% por paso), mientras que un $ARR = 65535$ maximiza la precisión en Timers de 16 bits.
+
+> **Regla de oro:** Para obtener una frecuencia exacta de 1 kHz con un reloj de 180 MHz, una combinación común es:
+> * **PSC = 179**
+> * **ARR = 999**
 
 **Configuración aplicada:**
 * **Resolución:** 1000 pasos (ARR = 999).
