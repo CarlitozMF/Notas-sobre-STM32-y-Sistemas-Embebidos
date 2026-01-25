@@ -121,16 +121,14 @@ Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para u
 
     **3. Corrección Gamma:** Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
 
-### 3. Ejecución del Planificador
+### 3. Ejecución del Despachador (Dispatcher)
+El bucle principal compara el `currentTick` contra el tiempo acumulado de cada tarea, ejecutándolas solo cuando es necesario:
 
-El loop principal (while(1)) despacha las tareas comparando el currentTick contra el lastTick de cada una, asegurando que el sistema sea determinista y eficiente:
 ```c
-uint32_t currentTick = HAL_GetTick();
-
 for (int i = 0; i < NUM_TASKS; i++) {
-    if (currentTick - taskTable[i].lastTick >= taskTable[i].period) {
-        taskTable[i].lastTick = currentTick;
-        taskTable[i].pTask(); // Ejecución de la tarea
+    if (HAL_GetTick() - taskTable[i].lastTick >= taskTable[i].period) {
+        taskTable[i].lastTick = HAL_GetTick();
+        taskTable[i].pTask(); // Ejecución asíncrona de la tarea
     }
 }
 ```
