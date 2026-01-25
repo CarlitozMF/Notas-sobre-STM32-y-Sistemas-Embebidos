@@ -1,18 +1,7 @@
-# Control Multitarea de Sistemas Lumínicos - STM32
+# 03_TIM_PWM: Dominando la energía: del control binario a la modulación por ancho de pulso (PWM) 
 
-Este proyecto implementa un **Planificador Cooperativo (Scheduler)** no bloqueante en un microcontrolador **STM32F439ZI**, diseñado para gestionar múltiples periféricos de potencia de forma concurrente. El sistema integra efectos visuales avanzados, control de registros a bajo nivel y una arquitectura de software modular para el aprendizaje de Timers y PWM.
-
-## 🚀 Características Principales
-
-* **Planificador de Tareas (Kernel Cooperativo):** Gestión de hilos de ejecución basada en aritmética de tiempos con `HAL_GetTick()`, evitando el uso de funciones bloqueantes.
-* **Breathing LED (TIM3):** Efecto de "respiración" analógica mediante modulación PWM en el Canal 4 del Timer 3.
-* **Driver RGB Encapsulado (TIM4):** Controlador modular con soporte para:
-    * Arquitecturas de Ánodo y Cátodo común.
-    * **Corrección Gamma (2.2):** Ajuste logarítmico para una percepción visual natural.
-    * **Modelo de Color HSV:** Transiciones de color suaves mediante Tono, Saturación y Brillo.
-* **Monitor de Estado (Heartbeat):** LED de señalización mediante Toggle para monitorear la salud del planificador.
-
----
+Este proyecto documenta el uso de **Timers** de hardware para crear modulación por ancho de pulsos (inglés Pulse width Modulation PWM) de una señal modificando el ciclo de trabajo de una señal periódica, para controlar la cantidad de energía que se envía a una carga con la **Nucleo-F439ZI**.
+Se implementa un **Planificador Cooperativo (Scheduler)** no bloqueante, diseñado para gestionar múltiples periféricos de potencia de forma concurrente. El sistema integra efectos visuales avanzados, control de registros a bajo nivel y una arquitectura de software modular para el aprendizaje de Timers y PWM.
 
 ## 🔩 Teoría de Operación: Timers y PWM
 
@@ -21,8 +10,6 @@ El modo **PWM (Pulse Width Modulation)** permite emular una señal analógica va
 * **Periodo (ARR):** Define el ciclo total de la señal.
 * **Duty Cycle (CCR):** Define el tiempo que la señal permanece en estado ALTO.
 * **Frecuencia ($f_{pwm}$):** Velocidad de conmutación (1 kHz para evitar *flicker*).
-
-
 
 ### 2. Cálculo de Frecuencia y Resolución
 La frecuencia se determina mediante la relación entre el reloj del sistema ($f_{clk}$) y los divisores del Timer:
@@ -33,8 +20,6 @@ $$f_{pwm} = \frac{f_{clk}}{(PSC + 1) \cdot (ARR + 1)}$$
 * **Resolución:** 1000 pasos (ARR = 999).
 * **Frecuencia de conteo:** 1 MHz (PSC ajustado según bus APB).
 * **Resultado:** Señal de 1 kHz con precisión del 0.1% en el Duty Cycle.
-
-
 
 ### 3. Configuración en STM32CubeMX
 Para replicar el comportamiento, los periféricos **TIM3** y **TIM4** deben configurarse con los siguientes parámetros:
@@ -53,3 +38,16 @@ El driver realiza escritura directa en memoria mediante macros de la HAL, permit
 ```c
 // Actualización instantánea del registro de comparación
 __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, valor_pwm);
+```
+
+## 🚀 Características Principales
+* **Planificador de Tareas (Kernel Cooperativo):** Gestión de hilos de ejecución basada en aritmética de tiempos con `HAL_GetTick()`, evitando el uso de funciones bloqueantes.
+* **Breathing LED (TIM3):** Efecto de "respiración" analógica mediante modulación PWM en el Canal 4 del Timer 3.
+* **Driver RGB Encapsulado (TIM4):** Controlador modular con soporte para:
+    * Arquitecturas de Ánodo y Cátodo común.
+    * **Corrección Gamma (2.2):** Ajuste logarítmico para una percepción visual natural.
+    * **Modelo de Color HSV:** Transiciones de color suaves mediante Tono, Saturación y Brillo.
+* **Monitor de Estado (Heartbeat):** LED de señalización mediante Toggle para monitorear la salud del planificador.
+
+---
+
