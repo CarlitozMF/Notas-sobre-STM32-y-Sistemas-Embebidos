@@ -72,27 +72,73 @@ typedef struct {
 } Task_t;
 ```
 
-### 1. Task_Breathing (Timer 3 - PWM)
+### Tabla de Planificación
 
-Controla un LED para generar un efecto de "respiración".
-* Periférico: TIM3_CH4.
-* Lógica: Modifica el ciclo de trabajo de forma incremental en cada llamada, invirtiendo el sentido al alcanzar los límites (0-1000).
-* Frecuencia de ejecución: 20ms (típico para suavidad visual).
+Las tareas se organizan con diferentes prioridades implícitas según su frecuencia:
+|   Tarea   |   Período |   Frecuencia  |   Propósito   |
+|BreathingLED   |   15 ms   |   ~66.6 Hz    |   Fluidez visual en el efecto de respiración. |
+|RGBHandler |   30 ms   |   ~33.3 Hz    |   Control de un LED RGB con driver de contro. |
+|Heartbeat  |   500 ms  |   2 Hz    |   Monitoreo de salud del Kernel.  |
 
-### 2. Task_RGBHandler (Timer 4 - Multi-Channel PWM)
-
-Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para un LED RGB.
-* Periférico: TIM4 (Canales 1, 2 y 3).
-* Funcionalidad:
-    1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
-    2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
-    3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
-
-### 3. Task_Heartbeat (GPIO Toggle)
-
+Se define una tabla de tareas con su tiempo de ejecucion.
+ ```c
+ /* --- Tabla de Tareas --- */
+Task_t taskTable[] = {
+    { Task_Heartbeat,    500, 0 }, // Tarea 1: Cada 500ms
+    { Task_BreathingLED,  15, 0 }, // Tarea 2: Cada 15ms
+    { Task_RGBHandler,    30, 0 }  // Tarea 3: Cada 30ms
+};
+#define NUM_TASKS (sizeof(taskTable)/sizeof(Task_t)
+```
+### 1. Task_Heartbeat (GPIO Toggle)
 Funciona como el monitor de salud del sistema.
 * Periférico: LED externo conectado al pin PB8 (usr_ledRojo).
 * Función: Realiza un toggle (cambio de estado) del pin en un intervalo largo (ej. 500ms).
 * Propósito: Si el LED deja de parpadear, indica que una de las otras tareas bloqueó el Kernel o hubo un fallo en el procesador.
 
+### 2. Task_Breathing (Timer 3 - PWM)
+Controla un LED para generar un efecto de "respiración".
+* Periférico: TIM3_CH4.
+* Lógica: Modifica el ciclo de trabajo de forma incremental en cada llamada, invirtiendo el sentido al alcanzar los límites (0-1000).
+* Frecuencia de ejecución: 20ms (típico para suavidad visual).
+
+### 3. Task_RGBHandler (Timer 4 - Multi-Channel PWM)
+Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para un LED RGB.
+* Periférico: TIM4 (Canales 2, 3 y 4).
+* Funcionalidad:
+    1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
+    2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
+    3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
+
+### Ejecución del Planificador
+
+El loop principal (while(1)) despacha las tareas comparando el currentTick contra el lastTick de cada una, asegurando que el sistema sea determinista y eficiente:
+```c
+uint32_t currentTick = HAL_GetTick();
+
+for (int i = 0; i < NUM_TASKS; i++) {
+    if (currentTick - taskTable[i].lastTick >= taskTable[i].period) {
+        taskTable[i].lastTick = currentTick;
+        taskTable[i].pTask(); // Ejecución de la tarea
+    }
+}
+```
+## 🏁 Conclusión
+
+El desarrollo de este proyecto demuestra que es posible gestionar sistemas embebidos de complejidad moderada de forma eficiente sin depender de un RTOS, siempre que se aplique una arquitectura de software sólida. La implementación del **Planificador Cooperativo** permite un determinismo aceptable para aplicaciones de control visual y monitoreo, maximizando el uso de los recursos de la **STM32F439ZI**.
+
+## 🏁 Conclusión
+
+Este proyecto integra con éxito tres pilares fundamentales de los sistemas embebidos modernos: la generación de señales mediante **Timers en modo PWM**, la abstracción de hardware a través de un **Driver RGB** con corrección logarítmica, y la gestión de recursos mediante un **Planificador de Tareas Cooperativo**. 
+
+La arquitectura implementada demuestra que el uso de aritmética de tiempos no bloqueante permite maximizar el rendimiento del procesador **STM32F439ZI**, logrando una respuesta visual fluida y un control determinista de los periféricos sin la sobrecarga de un sistema operativo en tiempo real.
+
+---
+*Este proyecto representa la consolidación de dos mundos: la precisión cronométrica de los Timers y la flexibilidad de la Modulación por Ancho de Pulso (PWM).*
+
+*Se logró la transición de una señal digital binaria a una señal analógica emulada, permitiendo un control granular sobre la energía entregada a los periféricos.*
+
+*La implementación del **Planificador Cooperativo** demuestra que la eficiencia no depende de la velocidad del reloj, sino de la arquitectura del código. Al eliminar el uso de funciones bloqueantes, permitimos que el hardware de la **STM32F439ZI** despliegue su verdadero potencial multitarea.*
+
+*Con este flujo de trabajo dominado, estamos listos para el siguiente nivel de los Timers: la captura de señales externas y la medición de tiempos de alta precisión.*
         
