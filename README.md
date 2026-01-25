@@ -70,5 +70,5 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 ---
 
 <div align="center">
-  <p><i>Notas creadas durante mi proceso de estudio y experimentación en San Miguel de Tucumán.</i></p>
+  <p><i>Notas creadas durante mi proceso de estudio y experimentación.</i></p>
 </div>
