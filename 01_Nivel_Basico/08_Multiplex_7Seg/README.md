@@ -48,10 +48,10 @@ Se configuraron etiquetas directamente en el archivo .ioc del CubeIDE. Esto perm
 
 Para un refresco limpio y sin "efecto fantasma" (Ghosting), se sigue este orden estrictamente:
 
-    1. Apagar todos los habilitadores (EN1=0, EN2=0, EN3=0).
-    2. Actualizar el bus de datos con el patrón del nuevo dígito.
-    3. Encender el habilitador correspondiente al dígito actual.
-    4. Pequeño delay (1-2ms) o salto de ciclo para permitir que el hardware conmute.
+   * 1. Apagar todos los habilitadores (EN1=0, EN2=0, EN3=0).
+   * 2. Actualizar el bus de datos con el patrón del nuevo dígito.
+   * 3. Encender el habilitador correspondiente al dígito actual.
+   * 4. Pequeño delay (1-2ms) o salto de ciclo para permitir que el hardware conmute.
 
 ## ⚠️ Análisis de Limitaciones
 
