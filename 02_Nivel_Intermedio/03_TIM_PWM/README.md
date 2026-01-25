@@ -53,9 +53,24 @@ El driver realiza escritura directa en memoria mediante macros de la HAL, permit
 __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, valor_pwm);
 ```
 
-## 🚀 Arquitectura del Sistema
+# 🚀 Arquitectura del Sistema
 
 El firmware está diseñado bajo un esquema de planificación cooperativa, donde cada tarea se ejecuta en intervalos de tiempo predefinidos sin bloquear el procesador. Esto garantiza que el control de los periféricos sea fluido y estable.
+
+## 🧠 Arquitectura: Kernel Cooperativo
+
+El "cerebro" del proyecto es un planificador basado en una arquitectura orientada a tareas. Utiliza aritmética de tiempo para decidir cuándo ejecutar cada función, optimizando el uso de la CPU al eliminar funciones bloqueantes como `HAL_Delay()`.
+
+### Estructura de Tareas (`Task_t`)
+Se define una estructura que permite gestionar cada tarea de forma independiente:
+
+```c
+typedef struct {
+    void (*pTask)(void);    // Puntero a la función de la tarea
+    uint32_t period;        // Período de ejecución en ms
+    uint32_t lastTick;      // Último tiempo de ejecución
+} Task_t;
+```
 
 ### 1. Task_Breathing (Timer 3 - PWM)
 
@@ -72,5 +87,12 @@ Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para u
     1. Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
     2. Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
     3. Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
+
+### 3. Task_Heartbeat (GPIO Toggle)
+
+Funciona como el monitor de salud del sistema.
+* Periférico: LED externo conectado al pin PB8 (usr_ledRojo).
+* Función: Realiza un toggle (cambio de estado) del pin en un intervalo largo (ej. 500ms).
+* Propósito: Si el LED deja de parpadear, indica que una de las otras tareas bloqueó el Kernel o hubo un fallo en el procesador.
 
         
