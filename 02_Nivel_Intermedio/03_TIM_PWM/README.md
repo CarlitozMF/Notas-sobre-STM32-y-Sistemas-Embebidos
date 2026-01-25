@@ -59,7 +59,18 @@ El firmware está diseñado bajo un esquema de planificación cooperativa, donde
 
 ### 1. Task_Breathing (Timer 3 - PWM)
 
-Controla un LED monocolor para generar un efecto de "respiración".
+Controla un LED para generar un efecto de "respiración".
 * Periférico: TIM3_CH4.
 * Lógica: Modifica el ciclo de trabajo de forma incremental en cada llamada, invirtiendo el sentido al alcanzar los límites (0-1000).
 * Frecuencia de ejecución: 20ms (típico para suavidad visual).
+
+### 2. Task_RGBHandler (Timer 4 - Multi-Channel PWM)
+
+Es el núcleo visual del proyecto. Encapsula la lógica compleja de color para un LED RGB.
+* Periférico: TIM4 (Canales 1, 2 y 3).
+* Funcionalidad:
+        Abstracción: El driver permite manejar el hardware independientemente de si el LED es de ánodo o cátodo común.
+        Modelo HSV: Permite transiciones de color naturales (cambio de tono) sin saltos bruscos.
+        Corrección Gamma (2.2): Mapea los valores de brillo para compensar la respuesta no lineal del ojo humano.
+
+        
