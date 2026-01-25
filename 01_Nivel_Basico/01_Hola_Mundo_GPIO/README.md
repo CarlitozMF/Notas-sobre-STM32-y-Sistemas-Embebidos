@@ -1,82 +1,66 @@
-# 01_Hola_Mundo_GPIO - El Hola Mundo Embebido
+# 01_Hola_Mundo_GPIO - El "Hello World" Embebido
 
-Este proyecto implementa una secuencia de parpadeo (desplazamiento de luz) utilizando los tres LEDs integrados en la placa Nucleo-F439ZI.
+Este proyecto implementa una secuencia de desplazamiento de luz (chaser) utilizando los tres LEDs integrados en la placa **Nucleo-F439ZI**. El objetivo es dominar la manipulación básica de salidas digitales y comprender la gestión de tiempo bloqueante.
 
 ## 📍 Configuración de Hardware
-Los LEDs de usuario en esta placa están conectados al **GPIOB**:
-- **LD1 (Verde):** Pin `PB0`
-- **LD2 (Azul):** Pin `PB7`
-- **LD3 (Rojo):** Pin `PB14`
+Según el manual de usuario **UM1974**, los LEDs están conectados al puerto **GPIOB** en una configuración *Active-High* (se encienden con un '1' lógico):
 
-## ⚙️ Conceptos Aprendidos
+| LED | Color | Pin | Registro |
+| :--- | :--- | :--- | :--- |
+| **LD1** | Verde | `PB0` | `GPIOB->ODR` |
+| **LD2** | Azul | `PB7` | `GPIOB->ODR` |
+| **LD3** | Rojo | `PB14`| `GPIOB->ODR` |
 
-### 1. Uso de HAL_GPIO_WritePin
-Inicialmente, la secuencia se realizó forzando el estado de cada pin. Esto es útil para asegurar estados específicos, pero requiere más líneas de código.
-- `GPIO_PIN_SET`: Enciende el LED.
-- `GPIO_PIN_RESET`: Apaga el LED.
 
-## 🚀 Código Principal
-```c
-  while (1)
-  {
-	  /* 1. Encender LED Verde (LD1) y esperar 500ms */
-	      HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET);
-	      HAL_Delay(500);
 
-	      /* 2. Encender LED Azul (LD2) y apagar el Verde */
-	      HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_RESET);
-	      HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_SET);
-	      HAL_Delay(500);
+---
 
-	      /* 3. Encender LED Rojo (LD3) y apagar el Azul */
-	      HAL_GPIO_WritePin(GPIOB, LD2_Pin, GPIO_PIN_RESET);
-	      HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_SET);
-	      HAL_Delay(500);
+## ⚙️ Evolución de la Lógica de Control
 
-	      /* 4. Apagar todo y reiniciar ciclo */
-	      HAL_GPIO_WritePin(GPIOB, LD3_Pin, GPIO_PIN_RESET);
-  }
-```
+### 1. Control Explícito con `HAL_GPIO_WritePin`
+En la primera etapa, se fuerza el estado de cada pin individualmente. Es el método más seguro para inicializar estados conocidos.
+* `GPIO_PIN_SET`: Pone el pin a 3.3V.
+* `GPIO_PIN_RESET`: Pone el pin a 0V.
 
-### 2. Optimización con HAL_GPIO_TogglePin
-Posteriormente, se refactorizó el código para utilizar **Toggle**, que invierte el estado lógico actual del pin.
+### 2. Optimización y Atomización con `HAL_GPIO_TogglePin`
+La refactorización utiliza la función de conmutación (Toggle). Para lograr el desplazamiento, se aplica una **lógica de estado previo**:
+1. Se inicializa el **LD1** encendido fuera del ciclo.
+2. Dentro del `while(1)`, se aplica Toggle al LED actual y al siguiente simultáneamente tras un retardo. Esto apaga uno y enciende el otro en el mismo instante del flujo de código.
 
-**Lógica de desplazamiento:**
-Para que la luz "salte" de un LED a otro usando Toggle, se debe:
-1. Inicializar un LED en estado `SET` antes del bucle principal.
-2. Dentro del `while(1)`, aplicar Toggle simultáneamente al LED encendido y al siguiente en la secuencia. Esto apaga el actual y enciende el próximo en una sola operación lógica.
+---
 
-## 🚀 Código Final (Secuencia de Desplazamiento)
+## 🚀 Implementación Final (Desplazamiento Eficiente)
 
 ```c
-/* Inicialización: Encendemos el primer LED */
+/* Inicialización: El sistema arranca con el LED Verde encendido */
 HAL_GPIO_WritePin(GPIOB, LD1_Pin, GPIO_PIN_SET); 
 
 while (1)
 {
-    HAL_Delay(500);
-    // Paso 1: Apaga Verde y enciende Azul
+    HAL_Delay(500); // Latencia bloqueante de 500ms
+    
+    // Paso 1: Apaga Verde y enciende Azul simultáneamente
     HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
     HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
     
     HAL_Delay(500);
-    // Paso 2: Apaga Azul y enciende Rojo
+    // Paso 2: Apaga Azul y enciende Rojo simultáneamente
     HAL_GPIO_TogglePin(GPIOB, LD2_Pin);
     HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
     
     HAL_Delay(500);
-    // Paso 3: Apaga Rojo y enciende Verde para reiniciar el ciclo
+    // Paso 3: Apaga Rojo y enciende Verde para cerrar el lazo
     HAL_GPIO_TogglePin(GPIOB, LD3_Pin);
     HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
 }
 ```
-## ⚠️ Nota importante sobre HAL_Delay()
 
-La función `HAL_Delay(ms)` es la forma más sencilla de generar pausas, pero tiene una característica crítica: **es una función bloqueante**.
+## ⚠️ Análisis Crítico: La Trampa de HAL_Delay()
 
-- **¿Cómo funciona?**: El procesador entra en un bucle cerrado comparando el tiempo actual con el valor del `Systick` (un contador interno del microcontrolador) hasta que transcurren los milisegundos indicados.
-- **Limitación**: Mientras el microcontrolador está ejecutando el "delay", **no puede realizar ninguna otra tarea** en el bucle principal (`while(1)`). Solo las interrupciones con mayor prioridad pueden interrumpir este tiempo.
-- **Uso recomendado**: Se debe usar solo para inicializaciones simples o aplicaciones donde no importe que el micro se "congele" momentáneamente. En aplicaciones profesionales de tiempo real, se suelen utilizar **Timers** o **Interrupciones** para manejar el tiempo sin bloquear el sistema.
+Debemos entender que HAL_Delay(ms) es un mecanismo de espera ocupada (Busy-Wait).
+* ¿Cómo funciona?: El procesador entra en un bucle cerrado consultando el valor de la variable uwTick (incrementada cada 1ms por la interrupción del SysTick).
+* Impacto en CPU: Durante el delay, el microcontrolador desperdicia millones de ciclos de reloj. Si ocurriera un evento crítico (como la pulsación de un botón de emergencia), el programa no lo detectaría hasta que termine el delay.
+* Conclusión: Esta técnica es aceptable para prototipos simples, pero en aplicaciones profesionales será reemplazada por Timers y Gestión de Tiempo No Bloqueante (visto en laboratorios posteriores).
 
 ---
 *Notas sobre la clásica primera práctica de programación adaptada a los sistemas embebidos*
