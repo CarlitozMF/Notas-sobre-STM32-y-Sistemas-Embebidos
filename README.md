@@ -57,6 +57,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 ### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/)- 🚀 EN CURSO -
 * **01_EXTI_Pulsadores:** *Manejo de interrupciones externas para respuesta inmediata.*
 * **02_TIM_Basic:** *Introduccion al manejo de base de Tiempos con Timers.*
+* **03_TIM_PWM:** *Señales PWM y gestión de Tareas mediante un Planificador -Kernel-*
 
 #### **[Proyectos Integradores](./02_Nivel_Intermedio/Proyectos_Integradores/)**
 * **01. Contador_Contador_Displays_7Seg:** *Evolucion del flujo secuencial tradicional hacia una Arquitectura Basada en Tareas y Eventos.*
