@@ -1,6 +1,7 @@
 # 03_TIM_PWM: Dominando la energía: del control binario a la modulación por ancho de pulso (PWM) 
 
 Este proyecto documenta el uso de **Timers** de hardware para crear modulación por ancho de pulsos (inglés Pulse width Modulation PWM) de una señal modificando el ciclo de trabajo de una señal periódica, para controlar la cantidad de energía que se envía a una carga con la **Nucleo-F439ZI**.
+
 Se implementa un **Planificador Cooperativo (Scheduler)** no bloqueante, diseñado para gestionar múltiples periféricos de potencia de forma concurrente. El sistema integra efectos visuales avanzados, control de registros a bajo nivel y una arquitectura de software modular para el aprendizaje de Timers y PWM.
 
 ## 🔩 Teoría de Operación: Timers y PWM
