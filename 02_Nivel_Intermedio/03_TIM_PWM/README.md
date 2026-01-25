@@ -130,20 +130,13 @@ for (int i = 0; i < NUM_TASKS; i++) {
 ```
 ## 🏁 Conclusión
 
-El desarrollo de este proyecto demuestra que es posible gestionar sistemas embebidos de complejidad moderada de forma eficiente sin depender de un RTOS, siempre que se aplique una arquitectura de software sólida. La implementación del **Planificador Cooperativo** permite un determinismo aceptable para aplicaciones de control visual y monitoreo, maximizando el uso de los recursos de la **STM32F439ZI**.
+Este proyecto representa:
 
-## 🏁 Conclusión
-
-Este proyecto integra con éxito tres pilares fundamentales de los sistemas embebidos modernos: la generación de señales mediante **Timers en modo PWM**, la abstracción de hardware a través de un **Driver RGB** con corrección logarítmica, y la gestión de recursos mediante un **Planificador de Tareas Cooperativo**. 
-
-La arquitectura implementada demuestra que el uso de aritmética de tiempos no bloqueante permite maximizar el rendimiento del procesador **STM32F439ZI**, logrando una respuesta visual fluida y un control determinista de los periféricos sin la sobrecarga de un sistema operativo en tiempo real.
+- La consolidación de dos mundos: la precisión cronométrica de los Timers y la flexibilidad de la Modulación por Ancho de Pulso (PWM).
+- Se logró la transición de una señal digital binaria a una señal analógica emulada, permitiendo un control granular sobre la energía entregada a los periféricos.
+- La abstracción de hardware a través de un **Driver RGB** con corrección logarítmica
+- La implementación del **Planificador Cooperativo** demuestra que la eficiencia no depende de la velocidad del reloj, sino de la arquitectura del código. Al eliminar el uso de funciones bloqueantes, permitimos que el hardware de la **STM32F439ZI** despliegue su verdadero potencial multitarea.
 
 ---
-*Este proyecto representa la consolidación de dos mundos: la precisión cronométrica de los Timers y la flexibilidad de la Modulación por Ancho de Pulso (PWM).*
-
-*Se logró la transición de una señal digital binaria a una señal analógica emulada, permitiendo un control granular sobre la energía entregada a los periféricos.*
-
-*La implementación del **Planificador Cooperativo** demuestra que la eficiencia no depende de la velocidad del reloj, sino de la arquitectura del código. Al eliminar el uso de funciones bloqueantes, permitimos que el hardware de la **STM32F439ZI** despliegue su verdadero potencial multitarea.*
-
 *Con este flujo de trabajo dominado, estamos listos para el siguiente nivel de los Timers: la captura de señales externas y la medición de tiempos de alta precisión.*
         
