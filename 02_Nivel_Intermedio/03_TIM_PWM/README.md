@@ -17,6 +17,11 @@ La frecuencia se determina mediante la relación entre el reloj del sistema ($f_
 
 $$f_{pwm} = \frac{f_{clk}}{(PSC + 1) \cdot (ARR + 1)}$$
 
+Donde:
+* fclk​: Es la frecuencia del reloj que alimenta al Timer (en una F439ZI, suele ser 90MHz o 180MHz dependiendo de qué bus APB use el Timer).
+* PSC (Prescaler): Divisor previo para "ralentizar" el reloj.
+* ARR (Auto-Reload Register): Es el "Counter Period". Define cuántos pasos cuenta el timer antes de volver a cero.
+
 **Configuración aplicada:**
 * **Resolución:** 1000 pasos (ARR = 999).
 * **Frecuencia de conteo:** 1 MHz (PSC ajustado según bus APB).
