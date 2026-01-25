@@ -1,6 +1,6 @@
-# ⚙️ Nivel Intermedio: Sistemas de Tiempo Real y Periféricos
+# 📂 Nivel Intermedio: Sistemas Reactivos y Periféricos Avanzados ⚙️
 
-Bienvenido a la segunda etapa de mi bitácora de desarrollo sobre la **STM32F439ZI**. En este nivel, el enfoque cambia radicalmente: abandonamos el flujo lineal para dominar el **Procesamiento Basado en Eventos y Tareas**.
+Bienvenido al **Nivel Intermedio**. Tras dominar los fundamentos de la programación modular en el Nivel Básico, aquí evolucionamos hacia una arquitectura de software **basada en eventos y tareas**. El objetivo central es optimizar el uso del CPU mediante el aprovechamiento de los periféricos de hardware integrados en el **Cortex-M4**.
 
 El objetivo principal es explotar el hardware interno del microcontrolador para lograr autonomía en los periféricos, aplicando el paradigma de **"CPU-Offloading"**: liberar al procesador de tareas repetitivas para que se enfoque exclusivamente en la lógica de alto nivel y toma de decisiones.
 
@@ -62,10 +62,19 @@ En esta etapa, los proyectos migran hacia un esquema de **Kernel Cooperativo (Ta
 * **Hito:** Uso de **ADC + Timers** para medir variables eléctricas (voltaje y corriente) de forma sincronizada.
 
 ---
+
+## 🧠 Competencias a Desarrollar
+- Configuración del **NVIC (Nested Vectored Interrupt Controller)** y manejo de prioridades.
+- Diseño de **ISR (Interrupt Service Routines)** eficientes (Short & Fast).
+- Uso de **Timers** como generadores de eventos asíncronos.
+- Introducción al procesamiento de señales y eficiencia energética.
+
+---
+
 ## 📚 Referencias Técnicas
 * **MCU:** STM32F439ZI (Cortex-M4 @ 180MHz).
 * **Documentación:** Reference Manual (RM0090), Datasheet F439.
 * **IDE:** STM32CubeIDE.
 
 ---
-*💻 Orquestando el silicio: del código secuencial a la autonomía del hardware.*
+*💻 “En el nivel intermedio, el programador deja de controlar el flujo y empieza a orquestar los eventos del hardware.”*
