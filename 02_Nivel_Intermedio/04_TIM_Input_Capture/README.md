@@ -141,6 +141,27 @@ El `main.c` integra estas piezas mediante una lógica de seguridad que garantiza
 * **Feedback de Captura:** Se utiliza un LED de diagnóstico (`usr_ledAzul`) dentro del callback del TIM3. Si el LED conmuta pero no hay datos en la UART, se identifica rápidamente un problema de lógica de software y no un fallo en la etapa de captura física.
 * **Gestión de Prioridades:** Mediante el **NVIC**, se asigna una prioridad superior al TIM3 sobre el TIM2. Esto asegura que la medición del sensor (tiempo crítico) nunca sea retrasada por el refresco del display (tarea cosmética), minimizando el *jitter* en la medición.
 
+## ⚠️ Lecciones Aprendidas: Gestión de Memoria y Scope
+
+Durante el desarrollo de este laboratorio, se identificó un problema crítico relacionado con el **alcance (scope)** de las variables de configuración en el proceso de inicialización.
+
+### El Problema
+Al declarar los arreglos de mapeo de pines (`display_pio_t segmentos[]` y `comunes[]`) como variables locales dentro de `main.c`, estos residen en la memoria **Stack**. Al reordenar el código de inicialización, los punteros almacenados en la estructura de control del driver de 7 segmentos quedaban apuntando a direcciones de memoria que eran sobrescritas por otros periféricos (como el sensor ultrasónico o el PWM).
+
+### La Solución: Uso de `static`
+Para garantizar la persistencia de los descriptores de hardware, se implementó el calificador `static`:
+
+```c
+// Dentro de USER CODE BEGIN 2
+static display_pio_t segmentos[] = { ... };
+static display_pio_t comunes[] = { ... };
+```
+### **¿Por qué funciona?**
+* **Persistencia:** La memoria para estas variables se asigna en el segmento de datos (`.data` / `.bss`), no en el stack.
+* **Integridad en ISR:** Asegura que cuando el Timer (TIM2) ejecute la rutina de refresco, los punteros a los puertos y pines sigan siendo válidos y no contengan "basura".
+
+    `Tip de Pro: En sistemas embebidos, si una estructura de control va a guardar la dirección (puntero) de una tabla de configuración, esa tabla debe ser siempre static o Global.`
+
 ## 🏁 Conclusión
 
 Este laboratorio consolida el aprendizaje sobre la reactividad del hardware:
