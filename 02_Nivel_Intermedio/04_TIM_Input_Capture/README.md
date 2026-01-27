@@ -103,6 +103,38 @@ Cuando un Timer completa su tarea (ya sea por desbordamiento de tiempo o por cap
 
 > **Regla de Diseño en Callbacks:** Las funciones dentro de un callback deben ser atómicas y eficientes. En este proyecto, los callbacks no calculan distancias ni envían datos por UART; simplemente registran valores de hardware y actualizan estados. El procesamiento pesado (como el filtro de mediana o el formateo de datos para la telemetría serie) se delega al `while(1)`.
 
+### 9. Mapeo de Hardware: Asignación de Pines y Periféricos
+
+La **Nucleo-F439ZI** ofrece una gran flexibilidad gracias a su matriz de funciones alternativas. Para este laboratorio, se han seleccionado pines que evitan conflictos con el programador embebido (ST-LINK) y permiten el uso simultáneo de los tres Timers:
+
+#### A. Telemetría Ultrasónica (TIM3)
+El **TIM3** opera con un Prescaler (PSC) de 89, logrando una base de tiempos de $1 \mu s$.
+
+| Periférico | Pin | Función | Configuración |
+| :--- | :--- | :--- | :--- |
+| **TIM3_CH1** | **PA6** | **Echo** | Input Capture (Rising/Falling) |
+| **GPIO Out** | **PB11** | **Trigger** | Salida Digital (Pulso 10µs via DWT) |
+| **GPIO Out** | **PF13** | **Feedback LED** | Toggle visual dentro del Callback (Azul) |
+
+#### B. Interfaz Visual: Display 7 Segmentos (TIM2)
+El **TIM2** gestiona el refresco asíncrono. Los segmentos están mapeados para optimizar el ruteo de señales en el puerto:
+
+| Función | Pines (GPIO Out) | Puerto |
+| :--- | :--- | :--- |
+| **Segmentos** | PE5, PE6, PE3, PF8, PF7, PF9, PG1 | Multiplexado A-G |
+| **Habilitadores** | PC8, PC9, PC10 | Control de Cátodos (EN1, EN2, EN3) |
+
+#### C. Indicador de Estado: LED RGB (TIM4)
+El **TIM4** genera las señales PWM para el control de colorimetría:
+
+| Periférico | Pin | Función | Canal |
+| :--- | :--- | :--- | :--- |
+| **TIM4_CH2** | **PD13** | **LED Rojo** | PWM Generation |
+| **TIM4_CH3** | **PD14** | **LED Verde** | PWM Generation |
+| **TIM4_CH4** | **PD15** | **LED Azul** | PWM Generation |
+
+> **Nota de Implementación:** El uso de etiquetas (*Labels*) en el archivo `.ioc` facilita la portabilidad del código, permitiendo que el `main.c` referencie los pines por su función (ej: `HCSR04_TRIG_Pin`) y no por su dirección física, siguiendo las buenas prácticas de abstracción de hardware.
+
 ### 9. Lógica de Control y Seguridad del Sistema
 
 El `main.c` integra estas piezas mediante una lógica de seguridad que garantiza la estabilidad del sistema:
