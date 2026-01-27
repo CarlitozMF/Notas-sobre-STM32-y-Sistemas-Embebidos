@@ -81,7 +81,6 @@ static void MX_TIM2_Init(void);
 /* --- Prototipos de Funciones Auxiliares --- */
 void Actualizar_Alerta_Visual(float d);
 void Debug_Log(const char *msg);
-float Aplicar_Filtro_Mediana(float nueva_dist);
 
 /* USER CODE END PFP */
 
@@ -101,35 +100,9 @@ void Actualizar_Alerta_Visual(float d) {
 	}
 }
 
+
 void Debug_Log(const char *msg) {
 	HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
-}
-
-// Función para ordenar y sacar la mediana
-float Aplicar_Filtro_Mediana(float nueva_dist) {
-	static float muestras[5] = {0};
-	static uint8_t indice = 0;
-	float ordenada[5];
-
-	// 1. Insertar nueva muestra
-	muestras[indice] = nueva_dist;
-	indice = (indice + 1) % 5;
-
-	// 2. Copiar para no arruinar el buffer original
-	for(int i=0; i<5; i++) ordenada[i] = muestras[i];
-
-	// 3. Ordenar (Bubble sort simple)
-	for(int i=0; i<4; i++) {
-		for(int j=i+1; j<5; j++) {
-			if(ordenada[i] > ordenada[j]) {
-				float temp = ordenada[i];
-				ordenada[i] = ordenada[j];
-				ordenada[j] = temp;
-			}
-		}
-	}
-	// 4. Devolver el valor central (el más estable)
-	return ordenada[2];
 }
 
 
@@ -239,12 +212,10 @@ int main(void)
 			float distancia = HCSR04_ReadDistance_cm(&ultrasonic);
 
 			if (distancia > 0.0f && distancia < 400.0f) {
-				// 1. Opcional: Aplicar filtro de mediana aquí si ves mucho rebote
-
-				// 2. Mostrar en display (esto actualiza el buffer que lee la ISR del TIM2)
+				// 1. Mostrar en display (esto actualiza el buffer que lee la ISR del TIM2)
 				Display7Seg_WriteNumber(&Display, (uint32_t)distancia);
 
-				// 3. Log para control
+				// 2. Log para control
 				char msg[40];
 				sprintf(msg, "Display: %d cm\r\n", (int)distancia);
 				Debug_Log(msg);
