@@ -44,7 +44,7 @@ En esta etapa, los proyectos migran hacia un esquema de **Kernel Cooperativo (Ta
 1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Gestión de flancos y prioridades en el NVIC.
 2. **[02_TIM_Basic](./02_TIM_Basic):** Creación de bases de tiempo precisas para tareas cíclicas.
 3. **[03_TIM_PWM](./03_TIM_PWM/):** Control de potencia y efectos visuales.
-4. **[04_TIM_InputCapture](./04_TIM_InputCapture):** Medición de frecuencia y sensores ultrasónicos. *(-Proximamente-)*
+4. **[04_TIM_Input_Capture](./04_TIM_Input_Capture):** Medición de frecuencia y sensores ultrasónicos.
 5. **[05_TIM_Encoder](./05_TIM_Encoder):** Lectura de encoders para control de motores. *(-Proximamente-)*
 6. **[06_ADC_Multichannel](./06_ADC_Multichannel):** Digitalización de señales mediante interrupciones y secuenciadores. *(-Proximamente-)*
 7. **[07_COM_UART_IT](./07_COM_UART_IT):** Comunicación bidireccional y parsing de comandos. *(-Proximamente-)*

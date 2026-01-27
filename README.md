@@ -46,7 +46,7 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **01_EXTI_Pulsadores:** *Interrupciones externas y prioridades en el NVIC.*
 * **02_TIM_Basic:** *Bases de tiempo precisas para tareas asíncronas.*
 * **03_TIM_PWM:** *Control de potencia y gestión mediante **Kernel Cooperativo (Task Scheduler)**.*
-* **04_TIM_Input_Capture:** *Medición de señales externas (Frecuencia/Ancho de Pulso).* 🆕
+* **04_TIM_Input_Capture:** *Medición de señales externas (Frecuencia/Ancho de Pulso).*
 * **05_TIM_Encoder:** *Odometría y control de posición para robótica.* 🆕
 * **06_ADC_Multichannel:** *Adquisición de señales analógicas y sensores.* 🆕
 * **07_COM_Protocols:** *Comunicación bidireccional mediante UART/I2C/SPI.* 🆕
