@@ -71,7 +71,7 @@ void delay_us(uint32_t us) {
     while (DWT->CYCCNT - startTick < delayTicks);
 }
 ```
-### 7. Orquestación de Hardware: Especialización de Timers
+### 6. Orquestación de Hardware: Especialización de Timers
 
 En este sistema, el microcontrolador actúa como un director de orquesta, delegando tareas críticas de tiempo a tres periféricos de hardware independientes. Esta especialización permite que el núcleo Cortex-M4 se libere de tareas repetitivas y se enfoque exclusivamente en la lógica de control y procesamiento de señales.
 
@@ -89,7 +89,7 @@ El **TIM2** funciona como el "latido" de la interfaz de usuario.
 
 ---
 
-### 8. La Importancia de los Callbacks: Arquitectura Reactiva
+### 7. La Importancia de los Callbacks: Arquitectura Reactiva
 
 El éxito de este proyecto reside en el uso correcto de las **Rutinas de Servicio de Interrupción (ISR)** a través de los *Callbacks* de la capa HAL. En el desarrollo de sistemas embebidos profesionales, entender la separación entre el código de "primer plano" (main loop) y el de "segundo plano" (callbacks) es vital para mantener el determinismo.
 
@@ -103,7 +103,7 @@ Cuando un Timer completa su tarea (ya sea por desbordamiento de tiempo o por cap
 
 > **Regla de Diseño en Callbacks:** Las funciones dentro de un callback deben ser atómicas y eficientes. En este proyecto, los callbacks no calculan distancias ni envían datos por UART; simplemente registran valores de hardware y actualizan estados. El procesamiento pesado (como el filtro de mediana o el formateo de datos para la telemetría serie) se delega al `while(1)`.
 
-### 9. Mapeo de Hardware: Asignación de Pines y Periféricos
+### 8. Mapeo de Hardware: Asignación de Pines y Periféricos
 
 La **Nucleo-F439ZI** ofrece una gran flexibilidad gracias a su matriz de funciones alternativas. Para este laboratorio, se han seleccionado pines que evitan conflictos con el programador embebido (ST-LINK) y permiten el uso simultáneo de los tres Timers:
 
