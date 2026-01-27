@@ -349,11 +349,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : USER_Btn_Pin PC5 */
-  GPIO_InitStruct.Pin = USER_Btn_Pin|GPIO_PIN_5;
+  /*Configure GPIO pin : USER_Btn_Pin */
+  GPIO_InitStruct.Pin = USER_Btn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SEG_C_Pin SEG_D_Pin SEG_E_Pin */
   GPIO_InitStruct.Pin = SEG_C_Pin|SEG_D_Pin|SEG_E_Pin;
