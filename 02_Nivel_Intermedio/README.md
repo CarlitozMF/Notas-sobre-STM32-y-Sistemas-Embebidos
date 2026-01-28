@@ -14,60 +14,58 @@ Implementación de interrupciones para lograr una latencia mínima de respuesta 
 * **Priorización:** Gestión del **NVIC (Nested Vectored Interrupt Controller)** para resolver conflictos de ejecución mediante niveles de prioridad y sub-prioridad.
 
 ### 2. Control de Tiempo y Señales (Timers) ⏱️
-El "corazón" del sistema. Los Timers dejan de ser simples contadores para convertirse en unidades de procesamiento de señales.
-* **PWM (Pulse Width Modulation):** Control de potencia, actuadores y síntesis de señales analógicas.
-* **Input Capture & Encoder Mode:** Medición de parámetros temporales externos y procesamiento por hardware de señales de cuadratura para odometría.
+El "corazón" del sistema. Los Timers dejan de ser simples contadores para convertirse en unidades de procesamiento de señales especializadas:
+* **PWM (Pulse Width Modulation):** Control de potencia, actuadores y síntesis de señales.
+* **Input Capture:** Digitalización de parámetros temporales externos (frecuencia, período y ancho de pulso).
+* **Output Compare:** Generación de eventos y frecuencias precisas (esencial para motores paso a paso).
+* **Slave & Gated Mode:** Interconexión de periféricos por hardware (Maestro/Esclavo) para orquestar tareas sin intervención del CPU.
+* **Encoder Mode:** Procesamiento por hardware de señales de cuadratura para odometría (Base para el proyecto Micromouse).
 
 ### 3. Digitalización de Señales (ADC) 📊
 El puente crítico entre el mundo físico (analógico) y el procesamiento digital.
-* **Muestreo por Interrupción:** Captura de datos en segundo plano sin detener la ejecución del código.
-* **Modo Scan y Secuenciador:** Configuración de múltiples canales (sensores de línea, potenciómetros, shunts de corriente) para lecturas automatizadas.
-* **Triggering:** Sincronización de la captura con eventos de Timer para obtener muestras en intervalos de tiempo exactos (esencial para análisis de señales).
+* **Muestreo por Interrupción:** Captura de datos en segundo plano.
+* **Triggering:** Sincronización de la captura con eventos de Timer para obtener muestras en intervalos de tiempo exactos (esencial para análisis de señales/Potencia).
 
 ### 4. Comunicación y Conectividad 📬
 Estandarización del diálogo con el mundo exterior mediante protocolos industriales.
-* **Arquitectura No Bloqueante:** Uso de UART/I2C/SPI con interrupciones para evitar cuellos de botella.
-* **Middleware:** Creación de drivers portables y reutilizables basados en estructuras y punteros.
+* **Arquitectura No Bloqueante:** Uso de UART/I2C/SPI con interrupciones para evitar cuellos de botella y esperas activas.
 
 ---
 
 ## 🏗️ Arquitectura de Software Aplicada
-En esta etapa, los proyectos migran hacia un esquema de **Kernel Cooperativo (Task Scheduler)**:
+En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada a Eventos**:
 
-* **Task Table:** Organización y ejecución de tareas basadas en períodos de tiempo específicos.
-* **Estado Volátil:** Uso correcto del calificador `volatile` y gestión de secciones críticas para asegurar la consistencia de datos entre ISR y Main.
-* **Abstracción:** Uso de *Handles* ,punteros y drivers para desacoplar el hardware de la lógica de aplicación.
+* **Task Scheduler:** Ejecución de tareas basadas en períodos de tiempo específicos sin bloqueos.
+* **Estado Volátil:** Uso correcto del calificador `volatile` y gestión de secciones críticas entre ISR y Main.
+* **Abstracción:** Uso de *Handles*, punteros y drivers para desacoplar el hardware de la lógica de aplicación.
 
 ---
 
 ## 🛠️ Roadmap de Laboratorios
 1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Gestión de flancos y prioridades en el NVIC.
 2. **[02_TIM_Basic](./02_TIM_Basic):** Creación de bases de tiempo precisas para tareas cíclicas.
-3. **[03_TIM_PWM](./03_TIM_PWM/):** Control de potencia y efectos visuales.
-4. **[04_TIM_Input_Capture](./04_TIM_Input_Capture):** Medición de frecuencia y sensores ultrasónicos.
-5. **[05_TIM_Encoder](./05_TIM_Encoder):** Lectura de encoders para control de motores. *(-Proximamente-)*
-6. **[06_ADC_Multichannel](./06_ADC_Multichannel):** Digitalización de señales mediante interrupciones y secuenciadores. *(-Proximamente-)*
-7. **[07_COM_UART_IT](./07_COM_UART_IT):** Comunicación bidireccional y parsing de comandos. *(-Proximamente-)*
+3. **[03_TIM_PWM](./03_TIM_PWM/):** Control de potencia y efectos visuales asíncronos.
+4. **[04_TIM_Input_Capture](./04_TIM_Input_Capture):** Telemetría ultrasónica y digitalización de tiempo.
+5. **[05_TIM_Output_Compare](./05_TIM_Output_Compare):** Control de precisión para motor paso a paso (28BYJ-48). *(-En Desarrollo-)*
+6. **[06_TIM_Slave_Mode](./06_TIM_Slave_Mode):** Frecuencímetro de hardware con sensor de color TCS3200. *(-Proximamente-)*
+7. **[07_TIM_One_Pulse](./07_TIM_One_Pulse):** Generación de pulsos determinísticos disparados por hardware. *(-Proximamente-)*
+8. **[08_TIM_Encoder](./08_TIM_Encoder):** Odometría y control de motores de cuadratura (Referencia Micromouse). *(-Proximamente-)*
 
 ---
 
 ## 🚀 Proyectos Integradores (EI)
-*Proyectos de síntesis donde se combinan múltiples periféricos bajo una arquitectura robusta.*
 
-### 01. [Contador de Personas Real-Time (Doble Barrera IR)](./Proyectos_Integradores/01_Contador_Displys_7Seg/)
-* **Hito:** Implementación del primer **Scheduler Cooperativo**.
-* **Técnicas:** EXTI Falling Edge, Timer-IT (181Hz) y Driver con soporte ASCII para 7-Segmentos.
+### 01. [Contador de Personas Real-Time](./Proyectos_Integradores/01_Contador_Displys_7Seg/)
+* **Técnicas:** EXTI Falling Edge, Timer-IT y Scheduler Cooperativo.
 
-### 02. [Smart Power Meter (Fase I: Adquisición)](./Proyectos_Integradores/02_Smart_Power_Meter/) *(-Proximamente-)*
-* **Hito:** Uso de **ADC + Timers** para medir variables eléctricas (voltaje y corriente) de forma sincronizada.
 
 ---
 
 ## 🧠 Competencias a Desarrollar
-- Configuración del **NVIC (Nested Vectored Interrupt Controller)** y manejo de prioridades.
+- Configuración del **NVIC** y manejo estricto de prioridades para evitar condiciones de carrera.
 - Diseño de **ISR (Interrupt Service Routines)** eficientes (Short & Fast).
-- Uso de **Timers** como generadores de eventos asíncronos.
-- Introducción al procesamiento de señales y eficiencia energética.
+- Orquestación de **Timers** como generadores de eventos y controladores de actuadores.
+- Gestión de memoria y uso de descriptores de hardware con calificador `static`.
 
 ---
 
