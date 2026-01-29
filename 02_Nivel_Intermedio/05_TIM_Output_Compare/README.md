@@ -23,16 +23,66 @@ El motor utilizado requiere una secuencia lógica de activación de 4 bobinas (I
 
 ### 3. Orquestación de Hardware: Triple Timer Workflow
 
-El sistema delega tareas críticas a tres periféricos independientes:
+El sistema delega tareas críticas a tres periféricos independientes, permitiendo que el núcleo Cortex-M4 se libere de procesos repetitivos y garantice el determinismo temporal:
 
 #### A. TIM5: Generador de Pasos (Output Compare)
-El **TIM5** actúa como el "corazón" del movimiento. Genera una interrupción periódica donde el microcontrolador ejecuta el siguiente paso de la tabla de estados. Esto garantiza que el motor mantenga su velocidad constante independientemente de la carga del procesador.
+El **TIM5** actúa como el "corazón" del movimiento. A diferencia de un PWM convencional, aquí utilizamos el modo **Output Compare (OC)** para generar una base de tiempo elástica y ultra-precisa.
+
+* **El Pin "Fantasma":** Aunque el canal 1 (`TIM5_CH1`) está configurado en el microcontrolador, no se utiliza para conmutar un pin físico de salida. Funciona exclusivamente como una **alarma interna** de alta resolución.
+* **Determinismo por Software:** Cada vez que el contador del Timer alcanza el valor de comparación, el hardware dispara de forma asíncrona la interrupción `HAL_TIM_OC_DelayElapsedCallback`. Es allí donde se ejecutan los pasos lógicos del motor.
+* **Técnica de Acumulador de Fase:** Para eliminar errores de redondeo y jitter, el siguiente evento de comparación se programa sumando el `step_delay` al valor de captura actual, asegurando una velocidad constante.
+
+```c
+/**
+ * @brief Lógica interna en el Callback de TIM5 (Output Compare)
+ * Genera el pulso de temporización para el motor sin bloquear el CPU.
+ */
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM5) {
+        // 1. Reprogramación del evento de comparación (Fase de acumulador)
+        uint32_t current_capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, current_capture + step_delay);
+
+        // 2. Ejecución del paso físico si el motor está habilitado
+        if (current_state == MOTOR_RUNNING) {
+            Stepper_Step_Sequential(&motor1); 
+        }
+    }
+}
+```
 
 #### B. TIM4: Estado Cromático (PWM)
-Gestiona el LED RGB de ánodo común. Utiliza **PWM** con **Corrección Gamma** para que la intensidad percibida sea lineal, asociando colores a los estados: Rojo (STOP), Verde (Giro Horario) y Azul (Giro Antihorario).
+Gestiona el LED RGB de ánodo común mediante tres canales independientes, transformando estados lógicos en una interfaz visual intuitiva:
+
+* **Modulación de Ancho de Pulso:** Genera señales de $1 \text{ kHz}$ para controlar la intensidad de cada componente (R, G, B) con una resolución de 1000 niveles.
+* **Corrección Gamma:** Se implementa un mapeo logarítmico para que la transición de colores y el brillo sean percibidos de forma lineal por el ojo humano, compensando la respuesta no lineal de la visión.
+* **Estados Visuales Definidos:** * **Rojo:** Sistema en `STOP` (Seguridad).
+    * **Verde:** Giro horario (`CW`).
+    * **Azul:** Giro antihorario (`CCW`).
+
+
 
 #### C. TIM2: Base de Tiempo para Display
-Genera una interrupción cada $1 \text{ ms}$ para el multiplexado del display de 7 segmentos, garantizando una imagen estable y sin parpadeos mediante un barrido asíncrono.
+Funciona como el "latido" de la interfaz visual. Genera una interrupción pura por desbordamiento (Update Event) cada **1 ms**.
+
+* **Multiplexado Asíncrono:** En cada interrupción, la ISR conmuta el cátodo común (o ánodo) correspondiente y actualiza los segmentos del siguiente dígito. Este proceso se delega al hardware para liberar al `while(1)`.
+* **Persistencia de Visión:** Al ejecutarse a una frecuencia de refresco efectiva de $1 \text{ kHz}$, se garantiza una imagen estable y libre de parpadeos (*flicker*). 
+* **Independencia de Tareas:** La calidad visual del display es totalmente inmune a la velocidad del motor, a la carga de la telemetría UART o a la latencia de otros procesos del sistema.
+
+
+
+```c
+/**
+ * @brief Callback de refresco del Display (TIM2)
+ * Se ejecuta cada 1ms para garantizar la persistencia de visión.
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+        // Barrido del siguiente dígito en el display
+        Display7Seg_Refresh_ISR(&Display);
+    }
+}
+```
 
 ### 4. El Misterio del Pin "Fantasma" (OC sin Pin Físico)
 Una duda común es por qué el pin **PA0 (TIM5_CH1)** no está conectado físicamente al motor. La respuesta reside en la arquitectura de interrupciones del STM32:
@@ -93,7 +143,7 @@ La asignación de pines se realizó utilizando etiquetas (*Labels*) en STM32Cube
 | **UART Telemetry** | **PD8 / PD9** | ST-LINK VCP | USART3 (115200 bps) |
 
 ### Visualización (Display 7 Segmentos)
-* **Segmentos (A-G):** Mapeados en los Puertos E, F y G (Ej: `SEG_A_Pin` en PE10).
+* **Segmentos (A-G):** Mapeados en los Puertos E, F y G (Ej: `SEG_A` en PE10).
 * **Habilitadores (EN1-EN3):** Mapeados en el Puerto C (`EN1_Pin` en PC8).
 
 ---
