@@ -32,57 +32,51 @@ El **TIM5** actúa como el "corazón" del movimiento. A diferencia de un PWM con
 * **Determinismo por Software:** Cada vez que el contador del Timer alcanza el valor de comparación, el hardware dispara de forma asíncrona la interrupción `HAL_TIM_OC_DelayElapsedCallback`. Es allí donde se ejecutan los pasos lógicos del motor.
 * **Técnica de Acumulador de Fase:** Para eliminar errores de redondeo y jitter, el siguiente evento de comparación se programa sumando el `step_delay` al valor de captura actual, asegurando una velocidad constante.
 
-```c
-/**
- * @brief Lógica interna en el Callback de TIM5 (Output Compare)
- * Genera el pulso de temporización para el motor sin bloquear el CPU.
- */
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-    if (htim->Instance == TIM5) {
-        // 1. Reprogramación del evento de comparación (Fase de acumulador)
-        uint32_t current_capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-        __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, current_capture + step_delay);
+**Configuración Técnica del Periférico:**
 
-        // 2. Ejecución del paso físico si el motor está habilitado
-        if (current_state == MOTOR_RUNNING) {
-            Stepper_Step_Sequential(&motor1); 
-        }
-    }
-}
-```
+| Parámetro | Valor | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Prescaler (PSC)** | 89 | Divide el reloj de 90MHz (APB1) para obtener una frecuencia de 1 MHz (**1 tick = 1 μs**). |
+| **Counter Period (ARR)** | 4294967295 | Se utiliza el rango máximo de 32 bits para evitar desbordamientos frecuentes en el acumulador. |
+| **OC Mode** | Toggle / Timing | Genera el evento de comparación sin necesidad de mover un pin físico de potencia. |
+| **NVIC Priority** | 0 (Máxima) | Garantiza que el paso del motor no sea retrasado por ninguna otra tarea del sistema. |
+
 
 #### B. TIM4: Estado Cromático (PWM)
-Gestiona el LED RGB de ánodo común mediante tres canales independientes, transformando estados lógicos en una interfaz visual intuitiva:
+Gestiona el LED RGB de ánodo común mediante tres canales independientes, transformando estados lógicos en una interfaz visual intuitiva y determinística:
 
-* **Modulación de Ancho de Pulso:** Genera señales de $1 \text{ kHz}$ para controlar la intensidad de cada componente (R, G, B) con una resolución de 1000 niveles.
-* **Corrección Gamma:** Se implementa un mapeo logarítmico para que la transición de colores y el brillo sean percibidos de forma lineal por el ojo humano, compensando la respuesta no lineal de la visión.
-* **Estados Visuales Definidos:** * **Rojo:** Sistema en `STOP` (Seguridad).
+* **Modulación de Ancho de Pulso:** Genera señales de $1 \text{ kHz}$ para controlar la intensidad de cada componente (R, G, B) con una resolución de 1000 niveles de *duty cycle*.
+* **Corrección Gamma:** Se implementa un mapeo logarítmico en el driver para que la transición de colores y el brillo sean percibidos de forma lineal por el ojo humano, compensando la respuesta fisiológica no lineal de la visión.
+* **Estados Visuales Definidos:** * **Rojo:** Sistema en `STOP` (Seguridad y reposo).
     * **Verde:** Giro horario (`CW`).
     * **Azul:** Giro antihorario (`CCW`).
 
+**Configuración Técnica del Periférico:**
+
+| Parámetro | Valor | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Prescaler (PSC)** | 179 | Divide el reloj de 180MHz (APB1) para obtener una frecuencia de conteo de 1 MHz. |
+| **Counter Period (ARR)** | 999 | Define una frecuencia PWM de 1 kHz, ideal para evitar parpadeos visibles en LEDs. |
+| **Canales OC** | CH2, CH3, CH4 | Asignados a los pines PD13, PD14 y PD15 respectivamente. |
+| **Modo PWM** | PWM Mode 1 | Los canales permanecen activos mientras el contador sea menor al valor de comparación (`CCR`). |
 
 
 #### C. TIM2: Base de Tiempo para Display
-Funciona como el "latido" de la interfaz visual. Genera una interrupción pura por desbordamiento (Update Event) cada **1 ms**.
+Funciona como el "latido" de la interfaz visual. Genera una interrupción pura por desbordamiento (Update Event) cada **1 ms**, actuando como un reloj dedicado para la interfaz de usuario.
 
-* **Multiplexado Asíncrono:** En cada interrupción, la ISR conmuta el cátodo común (o ánodo) correspondiente y actualiza los segmentos del siguiente dígito. Este proceso se delega al hardware para liberar al `while(1)`.
-* **Persistencia de Visión:** Al ejecutarse a una frecuencia de refresco efectiva de $1 \text{ kHz}$, se garantiza una imagen estable y libre de parpadeos (*flicker*). 
-* **Independencia de Tareas:** La calidad visual del display es totalmente inmune a la velocidad del motor, a la carga de la telemetría UART o a la latencia de otros procesos del sistema.
+* **Multiplexado Asíncrono:** En cada interrupción, la rutina de servicio (ISR) conmuta el habilitador del dígito correspondiente y actualiza el estado de los segmentos. Este proceso se delega totalmente al hardware del Timer, liberando al `while(1)` de tareas cosméticas.
+* **Persistencia de Visión:** Al ejecutarse a una frecuencia de refresco de $1 \text{ kHz}$, se garantiza una imagen estable y libre de parpadeos (*flicker*), ya que supera ampliamente la frecuencia crítica de fusión del ojo humano.
+* **Independencia de Tareas:** La calidad visual del display es inmune a la velocidad del motor, a la carga de la telemetría UART o a cualquier latencia de procesamiento en el lazo principal.
 
+**Configuración Técnica del Periférico:**
 
+| Parámetro | Valor | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Prescaler (PSC)** | 89 | Divide el reloj de 90MHz (APB1) para obtener una base de tiempo de 1 MHz. |
+| **Counter Period (ARR)** | 1999 | Genera una interrupción cada 2000 ticks ($2 \text{ ms}$ por dígito, resultando en un refresco total muy fluido). |
+| **NVIC Priority** | 2 | Se asigna una prioridad menor que el motor para asegurar que el control de movimiento sea siempre preferente. |
+| **Modo** | Update Interrupt | Dispara el callback por desbordamiento del contador sin necesidad de pines externos. |
 
-```c
-/**
- * @brief Callback de refresco del Display (TIM2)
- * Se ejecuta cada 1ms para garantizar la persistencia de visión.
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    if (htim->Instance == TIM2) {
-        // Barrido del siguiente dígito en el display
-        Display7Seg_Refresh_ISR(&Display);
-    }
-}
-```
 
 ### 4. El Misterio del Pin "Fantasma" (OC sin Pin Físico)
 Una duda común es por qué el pin **PA0 (TIM5_CH1)** no está conectado físicamente al motor. La respuesta reside en la arquitectura de interrupciones del STM32:
