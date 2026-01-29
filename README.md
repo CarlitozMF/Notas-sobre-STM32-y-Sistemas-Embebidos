@@ -49,14 +49,15 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **03_TIM_PWM:** *Control de potencia y efectos visuales asíncronos mediante **Kernel Cooperativo (Task Scheduler)**.*
 * **04_TIM_Input_Capture:** *Telemetría ultrasónica y digitalización de tiempo mediante captura de eventos externos.*
 * **05_TIM_Output_Compare:** *Control de precisión para motor paso a paso (28BYJ-48) y generación de eventos determinísticos.*
-* **06_TIM_Slave_Mode:** *Sincronización de periféricos y frecuencímetro de hardware con sensor de color TCS3200.*
-* **07_TIM_One_Pulse:** *Generación de pulsos determinísticos disparados por hardware.*
-* **08_TIM_Encoder:** *Odometría y control de motores de cuadratura mediante interfaz de encoder dedicada.*
-
+* **06_TIM_PWM_Advance:** *Control de posición mediante resolución temporal (Servomotor SG90 - 50Hz).*
+* **07_TIM_OC_Advance:** *Generación de audio y tonos mediante frecuencia variable por hardware (Buzzer Pasivo).*
+* **08_TIM_Slave_Mode:** *Sincronización de periféricos y frecuencímetro de hardware con sensor de color TCS3200.*
+* **09_TIM_One_Pulse:** *Generación de pulsos determinísticos disparados por hardware.*
+* **10_TIM_Encoder:** *Odometría y control de motores de cuadratura mediante interfaz de encoder dedicada.*
 
 #### **Proyectos Integradores Nivel 2**
 * **01. Contador_RealTime_7Seg:** *Evolución hacia Arquitectura Basada en Tareas.*
-* **02. Smart_Power_Meter:** *Adquisición sincronizada de tensión y corriente.* 🆕
+* **02. Control_Movimiento_HMI:** *Integración de Motor PAP, Servos y Feedback Auditivo.*
 
 ### 🚀 03_Nivel Avanzado (Arquitectura de alto rendimiento) - PROXIMAMENTE -
 * **DMA & RTOS:** *Transferencia de datos sin intervención de CPU y sistemas operativos de tiempo real.*

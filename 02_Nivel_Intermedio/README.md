@@ -15,20 +15,22 @@ Implementación de interrupciones para lograr una latencia mínima de respuesta 
 
 ### 2. Control de Tiempo y Señales (Timers) ⏱️
 El "corazón" del sistema. Los Timers dejan de ser simples contadores para convertirse en unidades de procesamiento de señales especializadas:
-* **PWM (Pulse Width Modulation):** Control de potencia, actuadores y síntesis de señales.
+* **PWM (Pulse Width Modulation):** Control de potencia, actuadores y posicionamiento de precisión (Servos).
 * **Input Capture:** Digitalización de parámetros temporales externos (frecuencia, período y ancho de pulso).
-* **Output Compare:** Generación de eventos y frecuencias precisas (esencial para motores paso a paso).
+* **Output Compare:** Generación de eventos, frecuencias de audio y control de motores paso a paso.
 * **Slave & Gated Mode:** Interconexión de periféricos por hardware (Maestro/Esclavo) para orquestar tareas sin intervención del CPU.
 * **Encoder Mode:** Procesamiento por hardware de señales de cuadratura para odometría (Base para el proyecto Micromouse).
+
+
 
 ### 3. Digitalización de Señales (ADC) 📊
 El puente crítico entre el mundo físico (analógico) y el procesamiento digital.
 * **Muestreo por Interrupción:** Captura de datos en segundo plano.
-* **Triggering:** Sincronización de la captura con eventos de Timer para obtener muestras en intervalos de tiempo exactos (esencial para análisis de señales/Potencia).
+* **Triggering:** Sincronización de la captura con eventos de Timer para obtener muestras en intervalos de tiempo exactos.
 
 ### 4. Comunicación y Conectividad 📬
 Estandarización del diálogo con el mundo exterior mediante protocolos industriales.
-* **Arquitectura No Bloqueante:** Uso de UART/I2C/SPI con interrupciones para evitar cuellos de botella y esperas activas.
+* **Arquitectura No Bloqueante:** Uso de UART/I2C/SPI con interrupciones para evitar cuellos de botella.
 
 ---
 
@@ -47,9 +49,11 @@ En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada
 3. **[03_TIM_PWM](./03_TIM_PWM/):** Control de potencia y efectos visuales asíncronos.
 4. **[04_TIM_Input_Capture](./04_TIM_Input_Capture):** Telemetría ultrasónica y digitalización de tiempo.
 5. **[05_TIM_Output_Compare](./05_TIM_Output_Compare):** Control de precisión para motor paso a paso (28BYJ-48).
-6. **[06_TIM_Slave_Mode](./06_TIM_Slave_Mode):** Frecuencímetro de hardware con sensor de color TCS3200. *(-En Desarrollo-)*
-7. **[07_TIM_One_Pulse](./07_TIM_One_Pulse):** Generación de pulsos determinísticos disparados por hardware. *(-Proximamente-)*
-8. **[08_TIM_Encoder](./08_TIM_Encoder):** Odometría y control de motores de cuadratura (Referencia Micromouse). *(-Proximamente-)*
+6. **[06_TIM_PWM_Advance](./06_TIM_PWM_Advance):** Control de posición mediante resolución temporal (Servomotor SG90). *(-En Desarrollo-)*
+7. **[07_TIM_OC_Advance](./07_TIM_OC_Advance):** Generación de tonos de audio mediante frecuencia variable (Buzzer Pasivo). *(-Proximamente-)*
+8. **[08_TIM_Slave_Mode](./08_TIM_Slave_Mode):** Sincronización de periféricos y frecuencímetro con sensor TCS3200. *(-Proximamente-)*
+9. **[09_TIM_One_Pulse](./09_TIM_One_Pulse):** Generación de pulsos determinísticos disparados por hardware. *(-Proximamente-)*
+10. **[10_TIM_Encoder](./10_TIM_Encoder):** Odometría y control de motores de cuadratura (Micromouse). *(-Proximamente-)*
 
 ---
 
@@ -57,7 +61,7 @@ En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada
 
 ### 01. [Contador de Personas Real-Time](./Proyectos_Integradores/01_Contador_Displys_7Seg/)
 * **Técnicas:** EXTI Falling Edge, Timer-IT y Scheduler Cooperativo.
-
+* **Hardware:** Sensores IR, Display 7-Segmentos multiplexado.
 
 ---
 
@@ -65,7 +69,7 @@ En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada
 - Configuración del **NVIC** y manejo estricto de prioridades para evitar condiciones de carrera.
 - Diseño de **ISR (Interrupt Service Routines)** eficientes (Short & Fast).
 - Orquestación de **Timers** como generadores de eventos y controladores de actuadores.
-- Gestión de memoria y uso de descriptores de hardware con calificador `static`.
+- Gestión de memoria mediante descriptores de hardware y calificador `static`.
 
 ---
 
