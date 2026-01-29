@@ -114,12 +114,95 @@ La robustez de este proyecto reside en la delegación de tareas a las **Rutinas 
 ### 1. El Latido del Motor: `HAL_TIM_OC_DelayElapsedCallback` (TIM5)
 Es la tarea más crítica. Utiliza la técnica de **Acumulador de Fase**: en cada interrupción, se lee el valor capturado y se reprograma el siguiente evento sumando el `step_delay`. Esto garantiza que los pasos del motor se ejecuten con un determinismo absoluto, independiente de cuánto tarde el código en el `while(1)`.
 
+```c
+/**
+ * @brief Callback de comparación de salida (Output Compare) del Timer.
+ * @details Responsable de la generación de pasos del motor PAP. Si el sistema
+ * está en RUNNING, ejecuta un paso. Independientemente del estado,
+ * reprograma la próxima comparación para mantener la base de tiempo
+ * constante y evitar latencias al arrancar.
+ * @param htim Puntero a la estructura del Timer que generó el evento.
+ */
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM5) {
+		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+
+			/* 1. Generación del paso lógico si el motor está habilitado */
+			if (current_state == MOTOR_RUNNING) {
+				Stepper_Step_Sequential(&motor1);
+			}
+
+			/* 2. Reprogramación del evento de comparación (Fase de acumulador) */
+			uint32_t current_capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+			__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, current_capture + step_delay);
+		}
+	}
+}
+```
+
 ### 2. El Refresco del Display: `HAL_TIM_PeriodElapsedCallback` (TIM2)
 Gestiona el multiplexado de los 3 dígitos. Se configuró para dispararse periódicamente, asegurando que el barrido de los segmentos sea constante y libre de parpadeos (*flicker*), incluso bajo alta carga de telemetría UART.
+
+```c
+/**
+ * @brief Callback del Timer para la multiplexación del Display.
+ * @note Se ejecuta periódicamente (recomendado cada 2-5ms) para refrescar
+ * un dígito a la vez del display de 7 segmentos.
+ * @param htim Puntero a la estructura del Timer que generó la interrupción.
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM2) {
+		Display7Seg_Refresh_ISR(&Display);
+	}
+}
+```
 
 ### 3. La Reactividad del Usuario: `HAL_GPIO_EXTI_Callback` (PB10/PB11)
 Implementa la lógica de control de marcha/parada y sentido de giro. 
 * **Debouncing por Software:** Se utiliza una guarda de tiempo ($250 \text{ ms}$) para ignorar los rebotes mecánicos de los pulsadores, garantizando transiciones limpias entre estados.
+
+```c
+/**
+ * @brief Callback de Interrupción Externa para pines GPIO.
+ * @details Gestiona el pulsador en PB10 y PB11 (lógica negativa) para alternar giros y entre
+ * los estados de marcha y parada del motor (Toggle). Incluye un
+ * mecanismo de debouncing por software.
+ * @param GPIO_Pin Pin que disparó la interrupción.
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	uint32_t interrupt_time = HAL_GetTick();
+	static uint32_t last_btn_start_time = 0;
+	static uint32_t last_btn_dir_time = 0;
+
+	/* --- Botón START/STOP (PB11) --- */
+	if (GPIO_Pin == usr_btn_PS_Pin) {
+		if (interrupt_time - last_btn_start_time > 250) {
+			if (current_state == MOTOR_STOPPED) {
+				current_state = MOTOR_RUNNING;
+			} else {
+				current_state = MOTOR_STOPPED;
+				Stepper_Stop(&motor1);
+			}
+			flag_update_display = 1;
+			last_btn_start_time = interrupt_time;
+		}
+	}
+
+	/* --- Botón CAMBIO DE SENTIDO (PB10) --- */
+	if (GPIO_Pin == usr_btn_G_Pin) {
+			if (interrupt_time - last_btn_dir_time > 250) {
+				// Invertimos el sentido para que coincida con el display
+				if (motor1.direction == STEP_CW) {
+					Stepper_Set_Direction(&motor1, STEP_CCW); // Ahora dirá 'r' y girará CCW
+				} else {
+					Stepper_Set_Direction(&motor1, STEP_CW);  // Ahora dirá 'C' y girará CW
+				}
+				flag_update_display = 1;
+				last_btn_dir_time = interrupt_time;
+			}
+		}
+}
+```
 
 ---
 
