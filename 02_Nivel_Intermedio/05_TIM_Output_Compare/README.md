@@ -34,6 +34,15 @@ Gestiona el LED RGB de ánodo común. Utiliza **PWM** con **Corrección Gamma** 
 #### C. TIM2: Base de Tiempo para Display
 Genera una interrupción cada $1 \text{ ms}$ para el multiplexado del display de 7 segmentos, garantizando una imagen estable y sin parpadeos mediante un barrido asíncrono.
 
+### 4. El Misterio del Pin "Fantasma" (OC sin Pin Físico)
+Una duda común es por qué el pin **PA0 (TIM5_CH1)** no está conectado físicamente al motor. La respuesta reside en la arquitectura de interrupciones del STM32:
+
+* **El Timer como Alarma:** En este proyecto, el periférico Output Compare no se usa para mover un pin externo, sino como un **despertador de alta precisión**. 
+* **Evento Interno:** Cada vez que el contador del Timer alcanza el valor de comparación (`CCR`), se genera un evento interno que dispara una interrupción (`IT`).
+* **Acción por Software:** En lugar de que el hardware mueva un pin, el CPU salta a la función `HAL_TIM_OC_DelayElapsedCallback`. Es allí donde nuestro código ejecuta la lógica del motor y conmuta los pines reales (**IN1 a IN4**).
+
+**Ventaja Técnica:** Esto nos permite desacoplar la base de tiempo (el "cuándo" se da el paso) de la lógica de potencia (el "cómo" se activan las bobinas), permitiendo que el motor gire con una precisión de microsegundos sin bloquear el resto del sistema.
+
 ---
 
 ## 🏗️ Arquitectura de Software: Scheduler No Bloqueante y Gestión de Tareas

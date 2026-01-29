@@ -46,8 +46,8 @@ En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada
 2. **[02_TIM_Basic](./02_TIM_Basic):** Creación de bases de tiempo precisas para tareas cíclicas.
 3. **[03_TIM_PWM](./03_TIM_PWM/):** Control de potencia y efectos visuales asíncronos.
 4. **[04_TIM_Input_Capture](./04_TIM_Input_Capture):** Telemetría ultrasónica y digitalización de tiempo.
-5. **[05_TIM_Output_Compare](./05_TIM_Output_Compare):** Control de precisión para motor paso a paso (28BYJ-48). *(-En Desarrollo-)*
-6. **[06_TIM_Slave_Mode](./06_TIM_Slave_Mode):** Frecuencímetro de hardware con sensor de color TCS3200. *(-Proximamente-)*
+5. **[05_TIM_Output_Compare](./05_TIM_Output_Compare):** Control de precisión para motor paso a paso (28BYJ-48).
+6. **[06_TIM_Slave_Mode](./06_TIM_Slave_Mode):** Frecuencímetro de hardware con sensor de color TCS3200. *(-En Desarrollo-)*
 7. **[07_TIM_One_Pulse](./07_TIM_One_Pulse):** Generación de pulsos determinísticos disparados por hardware. *(-Proximamente-)*
 8. **[08_TIM_Encoder](./08_TIM_Encoder):** Odometría y control de motores de cuadratura (Referencia Micromouse). *(-Proximamente-)*
 
