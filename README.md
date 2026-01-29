@@ -43,13 +43,16 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/) - 🚀 EN CURSO -
 *Transición hacia el procesamiento basado en eventos y autonomía del hardware:*
-* **01_EXTI_Pulsadores:** *Interrupciones externas y prioridades en el NVIC.*
-* **02_TIM_Basic:** *Bases de tiempo precisas para tareas asíncronas.*
-* **03_TIM_PWM:** *Control de potencia y gestión mediante **Kernel Cooperativo (Task Scheduler)**.*
-* **04_TIM_Input_Capture:** *Medición de señales externas (Frecuencia/Ancho de Pulso).*
-* **05_TIM_Encoder:** *Odometría y control de posición para robótica.* 🆕
-* **06_ADC_Multichannel:** *Adquisición de señales analógicas y sensores.* 🆕
-* **07_COM_Protocols:** *Comunicación bidireccional mediante UART/I2C/SPI.* 🆕
+
+* **01_EXTI_Pulsadores:** *Gestión de flancos y prioridades en el NVIC para interfaces reactivas.*
+* **02_TIM_Basic:** *Creación de bases de tiempo precisas para la ejecución de tareas cíclicas.*
+* **03_TIM_PWM:** *Control de potencia y efectos visuales asíncronos mediante **Kernel Cooperativo (Task Scheduler)**.*
+* **04_TIM_Input_Capture:** *Telemetría ultrasónica y digitalización de tiempo mediante captura de eventos externos.*
+* **05_TIM_Output_Compare:** *Control de precisión para motor paso a paso (28BYJ-48) y generación de eventos determinísticos.*
+* **06_TIM_Slave_Mode:** *Sincronización de periféricos y frecuencímetro de hardware con sensor de color TCS3200.*
+* **07_TIM_One_Pulse:** *Generación de pulsos determinísticos disparados por hardware.*
+* **08_TIM_Encoder:** *Odometría y control de motores de cuadratura mediante interfaz de encoder dedicada.*
+
 
 #### **Proyectos Integradores Nivel 2**
 * **01. Contador_RealTime_7Seg:** *Evolución hacia Arquitectura Basada en Tareas.*
