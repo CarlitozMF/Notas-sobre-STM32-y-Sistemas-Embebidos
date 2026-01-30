@@ -55,8 +55,6 @@ Genera una interrupción pura cada **2 ms** para el refresco del display de 7 se
 
 ---
 
----
-
 ## 🏗️ Arquitectura de Software: Flujo de Datos y Concurrencia
 
 El sistema opera bajo un esquema de **Multitarea Cooperativa** y **Gestión por Interrupciones**, eliminando el uso de retardos bloqueantes (`HAL_Delay`). La arquitectura se divide en tres dominios que interactúan de forma asíncrona:
