@@ -1,0 +1,116 @@
+# 06_TIM_PWM_Advance: Control de Posición, Interpolación de Velocidad y HMI Multimodal
+
+Este laboratorio documenta la implementación avanzada de señales **PWM (Pulse Width Modulation)** para el control de posición de un servomotor **SG90**. El proyecto integra una arquitectura orientada a eventos que combina el protocolo de comunicación PPM, el procesamiento de cuadratura mediante **EXTI**, y una interfaz HMI compuesta por un **LED RGB** (PWM) y un **Display 7 Segmentos** multiplexado, todo coordinado bajo la plataforma **Nucleo-F439ZI**.
+
+## 🎯 Objetivos
+- **Dominar el Protocolo PPM:** Configurar Timers para generar señales de 50Hz con resolución de microsegundos para el control de servos analógicos.
+- **Implementar Interpolación de Velocidad:** Desarrollar un algoritmo de movimiento suave (Slew Rate Control) para evitar picos de corriente y estrés mecánico.
+- **Procesamiento de Cuadratura por EXTI:** Decodificar señales de un encoder rotativo (**KY-040**) mediante interrupciones externas para un control de usuario fluido.
+- **Gestión de HMI Dinámica:** Mapear variables físicas (ángulo) a variables visuales (color RGB y dígitos) de forma asíncrona.
+
+---
+
+## 🔩 Teoría de Operación: PWM de Posición vs. PWM de Potencia
+
+### 1. El Protocolo de Control de Servos (PPM)
+A diferencia de un PWM para un LED, donde el ciclo de trabajo varía de 0% a 100%, el servomotor SG90 utiliza el ancho del pulso como un **mensaje de posición**. 
+
+* **Determinismo Temporal:** La señal debe ser estrictamente de **50 Hz** (20ms de periodo). Una desviación en esta frecuencia causa inestabilidad y vibraciones (jitter) en el actuador.
+* **Resolución de Ángulo:** El rango útil se limita a pulsos entre **0.5ms (0°)** y **2.5ms (180°)**. En este proyecto, se configuró el Timer para obtener una resolución de **1 μs por paso**, permitiendo un control sub-grado.
+
+### 2. Interpolación y Control de Velocidad
+Para evitar que el servo intente alcanzar el ángulo objetivo de forma instantánea (causando golpes mecánicos), se implementó un driver que calcula pasos intermedios:
+* **Target vs. Current:** El sistema diferencia entre la posición deseada (marcada por el encoder) y la posición actual del eje.
+* **Update Rate:** En cada iteración del lazo principal, el ángulo actual se acerca al objetivo según una tasa de velocidad definida en grados por segundo.
+
+---
+
+## 🏗️ Orquestación de Hardware: Triple Timer Workflow
+
+El sistema delega las tareas críticas a tres periféricos independientes para garantizar que el núcleo Cortex-M4 se enfoque en la lógica de control:
+
+#### A. TIM3: Generador de Posición (PWM Avanzado)
+Es el encargado de generar la señal de control para el servo. Se configuró para maximizar la resolución en el rango útil de 1ms a 2ms.
+
+
+
+**Configuración Técnica:**
+| Parámetro | Valor | Justificación Técnica |
+| :--- | :--- | :--- |
+| **Prescaler (PSC)** | 89 | Divide el reloj de 90MHz (APB1) para obtener **1 tick = 1 μs**. |
+| **Period (ARR)** | 19999 | Define el periodo exacto de **20ms (50Hz)** requerido por el servo. |
+| **Pulse (CCR)** | 520 - 2540 | Mapea el rango de 0.5ms a 2.5ms para cubrir los 180° de giro. |
+
+#### B. TIM4: Feedback Cromático (PWM)
+Controla el LED RGB mediante PWM de alta frecuencia ($1 \text{ kHz}$), permitiendo una mezcla de colores suave que indica la zona de trabajo del servo.
+
+* **Lógica por Segmentos:** El color cambia dinámicamente:
+    * **Rojo:** Posición mínima (0°).
+    * **Verde:** Zona central (90°).
+    * **Azul:** Posición máxima (180°).
+
+#### C. TIM2: Multiplexado de Display
+Genera una interrupción pura cada **2 ms** para el refresco del display de 7 segmentos. Al usar interrupciones, el brillo y la estabilidad del display son independientes de la carga de trabajo del procesador.
+
+---
+
+## 🚀 Arquitectura de Software: Control por Eventos y Drivers
+
+### 1. Decodificación del Encoder (EXTI)
+En lugar de hacer *polling* de los pines del encoder, el sistema utiliza **interrupciones externas** en los flancos del canal CLK. Esto garantiza que no se pierda ningún paso de la perilla, incluso durante movimientos rápidos del usuario.
+
+```c
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    // El driver gestiona internamente la máquina de estados de cuadratura
+    KY040_IRQ_Handler(&encoder_ctrl, GPIO_Pin);
+}
+```
+### 2. Lazo de Control No Bloqueante
+
+El `while(1)` orquesta la sincronización entre el encoder y el actuador sin detener el flujo del programa:
+
+```c
+while (1) {
+    // 1. MOTOR: Calcula la posición intermedia (movimiento suave)
+    SERVO_SG90_Update(&servo_main);
+
+    // 2. CONTROL: Sincroniza el objetivo con el encoder
+    int32_t target_from_encoder = encoder_ctrl.position;
+    SERVO_SG90_SetSpeedAngle(&servo_main, (int)target_from_encoder, 150.0f);
+
+    // 3. HMI: Actualiza visualización solo si hay cambios (eficiencia)
+    if ((int)servo_main.current_angle != last_angle) {
+        last_angle = (int)servo_main.current_angle;
+        Display7Seg_WriteNumber(&Display, last_angle);
+        UI_Update_Feedback(last_angle); // Cambia color del LED
+    }
+}
+```
+
+## 🗺️ Mapeo de Hardware y Configuración de Pines
+
+La asignación de recursos se ha diseñado para evitar conflictos entre los canales de los Timers y las líneas de interrupción externa, aprovechando el layout de la **Nucleo-F439ZI**:
+
+| Periférico | Pin | Etiqueta | Función / Justificación Técnica |
+| :--- | :--- | :--- | :--- |
+| **TIM3_CH2** | **PB5** | `SERVO_PWM` | **Control de Posición:** Salida PWM con resolución de 1μs. |
+| **TIM4_CH2-4**| **PD13-15** | `RGB_R/G/B` | **HMI Cromática:** Control de LED RGB mediante PWM de 1kHz. |
+| **EXTI 9_5** | **PF12** | `ENC_CLK` | **Reloj Encoder:** Dispara la IT para el conteo de pasos. |
+| **GPIO Input** | **PF13** | `ENC_DT` | **Sentido Encoder:** Determina dirección (CW/CCW). |
+| **TIM2** | **Interno** | `DISP_REFRESH` | **Base de Tiempo:** Interrupción de 2ms para multiplexado. |
+| **UART3** | **PD8/PD9** | `STLINK_VCP` | **Telemetría:** Debug Log a 115200 bps vía USB. |
+
+
+
+### Notas de Conexión:
+* **Servo SG90:** Se alimenta desde los 5V de la placa, pero la señal PWM es de 3.3V (compatible con el driver interno del servo).
+* **Encoder KY-040:** Requiere resistencias de *Pull-Up* activas (configuradas internamente en el STM32) debido a que es un dispositivo de colector abierto.
+* **Display 7 Segmentos:** Los pines de segmentos utilizan resistencias limitadoras de corriente para proteger los GPIOs del puerto E, F y G.
+
+## 🏁 Conclusión
+
+El **Laboratorio 06** demuestra la versatilidad del periférico Timer para ir más allá de la simple generación de señales, convirtiéndose en un protocolo de comunicación (PPM). La integración de algoritmos de interpolación y decodificación por interrupciones eleva el proyecto a un nivel de control industrial, donde la suavidad del movimiento y la respuesta del sistema son prioritarias.
+
+---
+
+*"Nivel Intermedio: Superar los retardos por software es el primer paso hacia la ingeniería; aquí el PWM deja de ser una señal de potencia para ser un protocolo de control determinístico."*

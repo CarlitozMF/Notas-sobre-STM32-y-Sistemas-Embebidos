@@ -23,7 +23,8 @@
 /* USER CODE BEGIN Includes */
 #include "rgb_driver.h"
 #include "Display_7Seg_stm32.h"
-#include "step_motor_28BYJ48.h"
+#include "encoder_ky040.h"
+#include "servo_sg90.h"
 #include "stdio.h"
 #include "string.h"
 /* USER CODE END Includes */
@@ -31,6 +32,15 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+/* Estados de colores */
+typedef enum {
+	ST_RED,
+	ST_YELLOW,
+	ST_MAGENTA,
+	ST_GREEN,
+	ST_BLUE,
+	ST_NONE
+} LED_State_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -45,13 +55,14 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
-TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
-
+LED_State_t last_led_state = ST_NONE;
+LED_State_t current_led_state = ST_NONE;
 /* --- Objeto para el Led RGB --- */
 RGB_LED_t ledRGB;
 
@@ -59,37 +70,30 @@ RGB_LED_t ledRGB;
 display_7seg_t Display;
 uint8_t bufferDisplay[3]; //buffer para la cantidad de displays
 
-/* --- Objeto para el motor --- */
-Stepper_t motor1;
+/* --- Objeto para el Servo SG90 --- */
+Servo_t servo_main;
 
-/* Banderas y Variables de Estado */
-typedef enum {
-	MOTOR_STOPPED = 0,
-	MOTOR_RUNNING
-} MotorState_t;
+/* --- Objeto para el Encoder KY-040 --- */
+KY040_t encoder_ctrl;
 
-volatile MotorState_t current_state = MOTOR_STOPPED;
-volatile uint8_t flag_update_display = 0;
-uint32_t last_telemetry_tick = 0;
-uint32_t last_display_tick = 0;
+/* Variables de control de la aplicación */
+int32_t last_angle = -1; // Para refrescar display solo si cambia
 
 char uart_buf[100];
-uint32_t step_delay = 900; // 850 us entre medios pasos = velocidad inicial
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_TIM5_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* --- Prototipos de Funciones Auxiliares --- */
 void Debug_Log(const char *msg);
-void Update_Display_String(void);
+void UI_Update_Feedback(int32_t angle);
 
 /* USER CODE END PFP */
 
@@ -100,18 +104,34 @@ void Debug_Log(const char *msg) {
 	HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
 }
 
-void Update_Display_String(void) {
-	char status_str[5];
-	if (current_state == MOTOR_RUNNING) {
-		float rpm = (60.0f * 1000000.0f) / (step_delay * 4096.0f);
-		char dir_char = (motor1.direction == STEP_CW) ? 'H' : 'A';
-		sprintf(status_str, "%c%02d", dir_char, (int)rpm);
-		Display7Seg_WriteString(&Display, status_str);
-	} else {
-		Display7Seg_WriteString(&Display, "StP");
+
+/**
+ * @brief Gestiona el feedback visual (LED RGB) según la posición del servo.
+ * @param angle Ángulo entero actual del sistema.
+ */
+void UI_Update_Feedback(int32_t angle) {
+	// Determinación del estado basada en la posición solicitada
+	if (angle == 0)                          current_led_state = ST_RED;
+	else if (angle > 0 && angle < 90)        current_led_state = ST_YELLOW;
+	else if (angle == 90)                   current_led_state = ST_MAGENTA;
+	else if (angle > 90 && angle < 180)      current_led_state = ST_GREEN;
+	else if (angle == 180)                  current_led_state = ST_BLUE;
+	else                                    current_led_state = ST_NONE;
+
+	// Actualización estática del hardware
+	if (current_led_state != last_led_state) {
+		last_led_state = current_led_state;
+
+		switch (current_led_state) {
+		case ST_RED:     RGB_Set_Preset(&ledRGB, COLOR_RED);     break;
+		case ST_YELLOW:  RGB_Set_Preset(&ledRGB, COLOR_YELLOW);  break;
+		case ST_MAGENTA: RGB_Set_Preset(&ledRGB, COLOR_MAGENTA); break;
+		case ST_GREEN:   RGB_Set_Preset(&ledRGB, COLOR_GREEN);   break;
+		case ST_BLUE:    RGB_Set_Preset(&ledRGB, COLOR_BLUE);    break;
+		default:         RGB_Set_Preset(&ledRGB, COLOR_OFF);     break;
+		}
 	}
 }
-
 /* USER CODE END 0 */
 
 /**
@@ -144,46 +164,24 @@ int main(void)
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_USART3_UART_Init();
-	MX_TIM5_Init();
 	MX_TIM2_Init();
+	MX_TIM3_Init();
 	MX_TIM4_Init();
 	/* USER CODE BEGIN 2 */
 
-	/* --- Log de Bienvenida: Laboratorio 05 --- */
+	/* --- Log de Bienvenida: Laboratorio 06 --- */
 	Debug_Log("\r\n==========================================\r\n");
-	Debug_Log("   LABORATORIO 05: OUTPUT COMPARE (TIM5)  \r\n");
-	Debug_Log("   CONTROL DE MOTOR PASO A PASO (28BYJ)   \r\n");
+	Debug_Log("   LABORATORIO 06: PWM AVANZADO  \r\n");
+	Debug_Log("   CONTROL DE SERVOMOTOR SG90   \r\n");
 	Debug_Log("   Plataforma: STM32 Nucleo-F439ZI        \r\n");
 	Debug_Log("==========================================\r\n");
 	Debug_Log("[OK] Nucleo Clock: 180 MHz\r\n");
 	Debug_Log(">>> Iniciando Perifericos...\r\n");
 
-
-	// ***********************Configuracion del motor paso a paso********************
-	// 1. Definición de pines para el driver genérico
-	GPIO_TypeDef* ports_A[] = {IN1_GPIO_Port, IN2_GPIO_Port, IN3_GPIO_Port, IN4_GPIO_Port};
-	uint16_t pins_A[] = {IN1_Pin, IN2_Pin, IN3_Pin, IN4_Pin};
-
-	// 2. Inicialización del motor
-	Stepper_Init(&motor1, ports_A, pins_A, MODE_HALF_STEP);
-	Stepper_Stop(&motor1); // Fuerza a que todas las bobinas inicien en LOW
-	motor1.current_step = 0; // Aseguramos el punto de partida
-	Debug_Log("[OK] Driver Stepper: Secuencia Half-Step Lista\r\n");
-
-	// 3. Sincronización del Timer: Programamos el primer evento de comparación
-	// Le decimos al Timer: "Interrumpí en el valor actual + el delay"
-	uint32_t initial_capture = __HAL_TIM_GET_COUNTER(&htim5);
-	__HAL_TIM_SET_COMPARE(&htim5, TIM_CHANNEL_1, initial_capture + step_delay);
-
-	// 4. Iniciar el Timer en modo Output Compare con Interrupción
-	HAL_TIM_OC_Start_IT(&htim5, TIM_CHANNEL_1);
-	Debug_Log("[OK] Periferico TIM5: Output Compare Activo\r\n");
-
-	// 5. Reporte de configuración inicial
-	char init_msg[60];
-	sprintf(init_msg, "[INFO] Delay: %lu us | RPM Estimadas: %.2f\r\n",
-			step_delay, (60.0f * 1000000.0f) / (step_delay * 4096.0f));
-	Debug_Log(init_msg);
+	// *********************** Configuración del Servo SG90 ***********************
+	// Inicializamos con los valores de pulso validados: 520 (0°) a 2540 (180°)
+	SERVO_SG90_Init(&servo_main, &htim3, TIM_CHANNEL_2, 520, 2540);
+	Debug_Log("[OK] Periferico TIM3: PWM Servo Listo (Canal 2)\r\n");
 
 	// ***********************Configuracion de los Display 7 Segmentos********************
 	// Configuración de Pines del Display (Usando Labels del .ioc)
@@ -218,10 +216,22 @@ int main(void)
 	// 2. Inicializamos el driver con el paquete
 	RGB_Init_Single(&ledRGB, &configRGB);
 	Debug_Log("[OK] Periferico TIM4: PWM RGB Activo\r\n");
+
+	// *********************** Configuración del Encoder KY-040 *******************
+	// Rango de 0 a 180 para coincidir con el servo
+	KY040_Init(&encoder_ctrl, ENC_CLK_GPIO_Port, ENC_CLK_Pin,
+			ENC_DT_GPIO_Port, ENC_DT_Pin,
+			ENC_SW_GPIO_Port, ENC_SW_Pin, 0, 180);
+
+
 	// Configuración inicial estética
+	// Sincronizamos la posición inicial del servo con el encoder (90 grados)
+	SERVO_SG90_SetAngle(&servo_main, encoder_ctrl.position);
+	Debug_Log("[OK] Encoder KY-040: Rango 0-180 Configurado\r\n");
 	Display7Seg_SetBrightness(&Display, 80);
-	Display7Seg_WriteString(&Display, "StP"); // Mensaje de "Stop" al arrancar
+	Display7Seg_WriteString(&Display, "HI");
 	Debug_Log(">>> Sistema listo...\r\n\r\n");
+
 
 	/* USER CODE END 2 */
 
@@ -233,68 +243,34 @@ int main(void)
 
 		/* USER CODE BEGIN 3 */
 
-		uint32_t current_tick = HAL_GetTick();
+		// 1. MOTOR: Actualizar posición intermedia del servo (interpolación suave)
+		SERVO_SG90_Update(&servo_main);
 
-		/* --- Tarea 1: Motor de Efectos RGB --- */
-		// Se encarga de las transiciones suaves si hay efectos activos
-		RGB_Effects_Handler(&ledRGB, 20, 5);
+		// 2. CONTROL: Sincronizar el objetivo del servo con la perilla del encoder
+		int32_t target_from_encoder = encoder_ctrl.position;
+		SERVO_SG90_SetSpeedAngle(&servo_main, (int)target_from_encoder, 150.0f);
 
-		/* --- Tarea 2: Gestión de Banderas (Eventos de Botones PB10/PB11) --- */
-		if (flag_update_display) {
-			flag_update_display = 0;
+		/* --- 3. FEEDBACK VISUAL 1: LED RGB (Lógica por Segmentos Fijos) --- */
 
-			if (current_state == MOTOR_RUNNING) {
-				RGB_Stop_Effect(&ledRGB);
-				Display7Seg_SetFlash(&Display, 0);
+		UI_Update_Feedback((int)servo_main.current_angle);
 
-				// Cambio de color dinámico por dirección
-				if (motor1.direction == STEP_CW) {
-					RGB_Set_Preset(&ledRGB, COLOR_GREEN);
-					Debug_Log("[EVENT] Motor START / Direction: CW\r\n");
-				} else {
-					RGB_Set_Preset(&ledRGB, COLOR_BLUE);
-					Debug_Log("[EVENT] Motor START / Direction: CCW\r\n");
-				}
-			} else {
-				// Feedback visual de parada
-				RGB_Set_Preset(&ledRGB, COLOR_RED);
-				Display7Seg_SetFlash(&Display, 500);
-				Debug_Log("[EVENT] Motor STOPPED\r\n");
-			}
+		// 4. FEEDBACK VISUAL 2: Display de 7 Segmentos
+		// Solo actualizamos el display cuando el ángulo entero cambia
+		if ((int)servo_main.current_angle != last_angle) {
+			last_angle = (int)servo_main.current_angle;
+			Display7Seg_WriteNumber(&Display, last_angle);
 
-			// Sincronizamos el refresco visual inmediato
-			last_display_tick = current_tick;
-			Update_Display_String();
-		}
-
-		/* --- Tarea 3: Telemetría UART (Cada 1000ms) --- */
-		if (current_tick - last_telemetry_tick >= 1000) {
-			last_telemetry_tick = current_tick;
-
-			if (current_state == MOTOR_RUNNING) {
-				float rpm = (60.0f * 1000000.0f) / (step_delay * 4096.0f);
-				/*
-				// Agregamos el INDEX aquí para debuggear el sentido antihorario
-				snprintf(uart_buf, sizeof(uart_buf),
-						"[STATUS] Dir: %d | Index: %d | RPM: %.2f | Delay: %lu us\r\n",
-						motor1.direction, motor1.current_step, rpm, step_delay);*/
-
-		            // Reporte completo de telemetría
-		            snprintf(uart_buf, sizeof(uart_buf),
-		                     "[STATUS] State: RUN | Dir: %s | RPM: %.2f | Delay: %lu us\r\n",
-		                     (motor1.direction == STEP_CW) ? "CW" : "CCW", rpm, step_delay);
-			} else {
-				snprintf(uart_buf, sizeof(uart_buf), "[STATUS] Estado: IDLE | Listo para Comenzar...\r\n");
-			}
+			// Log opcional para debug en PC
+			sprintf(uart_buf, "Angulo: %d | Target: %d\r\n", (int)last_angle, (int)target_from_encoder);
 			Debug_Log(uart_buf);
 		}
 
-		/* --- Tarea 4: Refresco Visual del Display (Cada 200ms) --- */
-		if (current_tick - last_display_tick >= 200) {
-			last_display_tick = current_tick;
-			Update_Display_String();
+		// 5. ACCIÓN: Botón Reset del Encoder
+		if (encoder_ctrl.sw_pressed) {
+			encoder_ctrl.position = 90;
+			encoder_ctrl.sw_pressed = 0;
+			Debug_Log(">>> Encoder Reset: 90 Grad\r\n");
 		}
-
 	}
 	/* USER CODE END 3 */
 }
@@ -397,6 +373,65 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+ * @brief TIM3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM3_Init(void)
+{
+
+	/* USER CODE BEGIN TIM3_Init 0 */
+
+	/* USER CODE END TIM3_Init 0 */
+
+	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+	TIM_MasterConfigTypeDef sMasterConfig = {0};
+	TIM_OC_InitTypeDef sConfigOC = {0};
+
+	/* USER CODE BEGIN TIM3_Init 1 */
+
+	/* USER CODE END TIM3_Init 1 */
+	htim3.Instance = TIM3;
+	htim3.Init.Prescaler = 89;
+	htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim3.Init.Period = 19999;
+	htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+	if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	sConfigOC.OCMode = TIM_OCMODE_PWM1;
+	sConfigOC.Pulse = 0;
+	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+	if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	/* USER CODE BEGIN TIM3_Init 2 */
+
+	/* USER CODE END TIM3_Init 2 */
+	HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
  * @brief TIM4 Initialization Function
  * @param None
  * @retval None
@@ -464,64 +499,6 @@ static void MX_TIM4_Init(void)
 }
 
 /**
- * @brief TIM5 Initialization Function
- * @param None
- * @retval None
- */
-static void MX_TIM5_Init(void)
-{
-
-	/* USER CODE BEGIN TIM5_Init 0 */
-
-	/* USER CODE END TIM5_Init 0 */
-
-	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-	TIM_MasterConfigTypeDef sMasterConfig = {0};
-	TIM_OC_InitTypeDef sConfigOC = {0};
-
-	/* USER CODE BEGIN TIM5_Init 1 */
-
-	/* USER CODE END TIM5_Init 1 */
-	htim5.Instance = TIM5;
-	htim5.Init.Prescaler = 89;
-	htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-	htim5.Init.Period = 4294967295;
-	htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-	htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-	if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-	if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	if (HAL_TIM_OC_Init(&htim5) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-	if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-	sConfigOC.Pulse = 0;
-	sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-	sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-	if (HAL_TIM_OC_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	/* USER CODE BEGIN TIM5_Init 2 */
-
-	/* USER CODE END TIM5_Init 2 */
-
-}
-
-/**
  * @brief USART3 Initialization Function
  * @param None
  * @retval None
@@ -571,17 +548,16 @@ static void MX_GPIO_Init(void)
 	__HAL_RCC_GPIOC_CLK_ENABLE();
 	__HAL_RCC_GPIOF_CLK_ENABLE();
 	__HAL_RCC_GPIOH_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOB_CLK_ENABLE();
 	__HAL_RCC_GPIOG_CLK_ENABLE();
 	__HAL_RCC_GPIOD_CLK_ENABLE();
-	__HAL_RCC_GPIOA_CLK_ENABLE();
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOE, SEG_C_Pin|SEG_A_Pin|SEG_B_Pin|IN1_Pin
-			|IN2_Pin|IN3_Pin|IN4_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, SEG_C_Pin|SEG_A_Pin|SEG_B_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOF, SEG_E_Pin|SEG_D_Pin|SEG_F_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOF, SEG_E_Pin|SEG_D_Pin|SEG_F_Pin|usr_ledAzul_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pin Output Level */
 	HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
@@ -592,10 +568,8 @@ static void MX_GPIO_Init(void)
 	/*Configure GPIO pin Output Level */
 	HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin, GPIO_PIN_RESET);
 
-	/*Configure GPIO pins : SEG_C_Pin SEG_A_Pin SEG_B_Pin IN1_Pin
-                           IN2_Pin IN3_Pin IN4_Pin */
-	GPIO_InitStruct.Pin = SEG_C_Pin|SEG_A_Pin|SEG_B_Pin|IN1_Pin
-			|IN2_Pin|IN3_Pin|IN4_Pin;
+	/*Configure GPIO pins : SEG_C_Pin SEG_A_Pin SEG_B_Pin */
+	GPIO_InitStruct.Pin = SEG_C_Pin|SEG_A_Pin|SEG_B_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -607,12 +581,18 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
-	/*Configure GPIO pins : SEG_E_Pin SEG_D_Pin SEG_F_Pin */
-	GPIO_InitStruct.Pin = SEG_E_Pin|SEG_D_Pin|SEG_F_Pin;
+	/*Configure GPIO pins : SEG_E_Pin SEG_D_Pin SEG_F_Pin usr_ledAzul_Pin */
+	GPIO_InitStruct.Pin = SEG_E_Pin|SEG_D_Pin|SEG_F_Pin|usr_ledAzul_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+	/*Configure GPIO pin : ENC_DT_Pin */
+	GPIO_InitStruct.Pin = ENC_DT_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
+	HAL_GPIO_Init(ENC_DT_GPIO_Port, &GPIO_InitStruct);
 
 	/*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
 	GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
@@ -628,12 +608,6 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-	/*Configure GPIO pins : usr_btn_G_Pin usr_btn_PS_Pin */
-	GPIO_InitStruct.Pin = usr_btn_G_Pin|usr_btn_PS_Pin;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-	GPIO_InitStruct.Pull = GPIO_PULLUP;
-	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
 	/*Configure GPIO pin : USB_OverCurrent_Pin */
 	GPIO_InitStruct.Pin = USB_OverCurrent_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -647,7 +621,22 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+	/*Configure GPIO pin : ENC_CLK_Pin */
+	GPIO_InitStruct.Pin = ENC_CLK_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
+	HAL_GPIO_Init(ENC_CLK_GPIO_Port, &GPIO_InitStruct);
+
+	/*Configure GPIO pin : ENC_SW_Pin */
+	GPIO_InitStruct.Pin = ENC_SW_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
+	HAL_GPIO_Init(ENC_SW_GPIO_Port, &GPIO_InitStruct);
+
 	/* EXTI interrupt init*/
+	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
 	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
@@ -659,81 +648,31 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /**
- * @brief Callback del Timer para la multiplexación del Display.
- * @note Se ejecuta periódicamente (recomendado cada 2-5ms) para refrescar
- * un dígito a la vez del display de 7 segmentos.
- * @param htim Puntero a la estructura del Timer que generó la interrupción.
+ * @brief Callback para interrupciones de Timer (Multiplexado del Display)
  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Instance == TIM2) {
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	// Verificamos que la interrupción provenga del TIM2 (el del display)
+	if (htim->Instance == TIM2)
+	{
+		// Llamamos a la función de refresco del driver del display
+		// Esta función apaga el dígito anterior y enciende el siguiente
 		Display7Seg_Refresh_ISR(&Display);
 	}
 }
 
-
 /**
- * @brief Callback de Interrupción Externa para pines GPIO.
- * @details Gestiona el pulsador en PB10 y PB11 (lógica negativa) para alternar giros y entre
- * los estados de marcha y parada del motor (Toggle). Incluye un
- * mecanismo de debouncing por software.
- * @param GPIO_Pin Pin que disparó la interrupción.
+ * @brief Callback para interrupciones externas (Giro y Botón del Encoder)
  */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	uint32_t interrupt_time = HAL_GetTick();
-	static uint32_t last_btn_start_time = 0;
-	static uint32_t last_btn_dir_time = 0;
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	// Pasamos el pin que disparó la interrupción al manejador del driver
+	// El driver internamente comparará si es ENC_CLK_Pin o ENC_SW_Pin
+	KY040_IRQ_Handler(&encoder_ctrl, GPIO_Pin);
 
-	/* --- Botón START/STOP (PB11) --- */
-	if (GPIO_Pin == usr_btn_PS_Pin) {
-		if (interrupt_time - last_btn_start_time > 250) {
-			if (current_state == MOTOR_STOPPED) {
-				current_state = MOTOR_RUNNING;
-			} else {
-				current_state = MOTOR_STOPPED;
-				Stepper_Stop(&motor1);
-			}
-			flag_update_display = 1;
-			last_btn_start_time = interrupt_time;
-		}
-	}
-
-	/* --- Botón CAMBIO DE SENTIDO (PB10) --- */
-	if (GPIO_Pin == usr_btn_G_Pin) {
-			if (interrupt_time - last_btn_dir_time > 250) {
-				// Invertimos el sentido para que coincida con el display
-				if (motor1.direction == STEP_CW) {
-					Stepper_Set_Direction(&motor1, STEP_CCW); // Ahora dirá 'r' y girará CCW
-				} else {
-					Stepper_Set_Direction(&motor1, STEP_CW);  // Ahora dirá 'C' y girará CW
-				}
-				flag_update_display = 1;
-				last_btn_dir_time = interrupt_time;
-			}
-		}
-}
-
-
-/**
- * @brief Callback de comparación de salida (Output Compare) del Timer.
- * @details Responsable de la generación de pasos del motor PAP. Si el sistema
- * está en RUNNING, ejecuta un paso. Independientemente del estado,
- * reprograma la próxima comparación para mantener la base de tiempo
- * constante y evitar latencias al arrancar.
- * @param htim Puntero a la estructura del Timer que generó el evento.
- */
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Instance == TIM5) {
-		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-
-			/* 1. Generación del paso lógico si el motor está habilitado */
-			if (current_state == MOTOR_RUNNING) {
-				Stepper_Step_Sequential(&motor1);
-			}
-
-			/* 2. Reprogramación del evento de comparación (Fase de acumulador) */
-			uint32_t current_capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, current_capture + step_delay);
-		}
+	// Opcional: Si tienes el botón de la placa (USER_Btn_Pin), puedes manejarlo aquí
+	if (GPIO_Pin == USER_Btn_Pin) {
+		// Tu lógica para el botón azul de la Nucleo si quisieras usarlo
 	}
 }
 
