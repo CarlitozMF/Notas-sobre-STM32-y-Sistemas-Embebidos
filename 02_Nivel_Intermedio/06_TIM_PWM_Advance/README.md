@@ -45,6 +45,7 @@ Es el encargado de generar la señal de control para el servo. Se configuró par
 Controla el LED RGB mediante PWM de alta frecuencia ($1 \text{ kHz}$), permitiendo una mezcla de colores suave que indica la zona de trabajo del servo.
 
 * **Lógica por Segmentos:** El color cambia dinámicamente:
+
     * **Rojo:** Posición mínima (0°).
     * **Verde:** Zona central (90°).
     * **Azul:** Posición máxima (180°).
@@ -54,38 +55,122 @@ Genera una interrupción pura cada **2 ms** para el refresco del display de 7 se
 
 ---
 
-## 🚀 Arquitectura de Software: Control por Eventos y Drivers
+---
 
-### 1. Decodificación del Encoder (EXTI)
-En lugar de hacer *polling* de los pines del encoder, el sistema utiliza **interrupciones externas** en los flancos del canal CLK. Esto garantiza que no se pierda ningún paso de la perilla, incluso durante movimientos rápidos del usuario.
+## 🏗️ Arquitectura de Software: Flujo de Datos y Concurrencia
+
+El sistema opera bajo un esquema de **Multitarea Cooperativa** y **Gestión por Interrupciones**, eliminando el uso de retardos bloqueantes (`HAL_Delay`). La arquitectura se divide en tres dominios que interactúan de forma asíncrona:
+
+1. **Dominio de Entrada (Eventos de Usuario):** El Encoder KY-040 genera interrupciones externas (**EXTI**) que son procesadas de inmediato. El software no "espera" al usuario; el hardware le avisa al procesador que la perilla se ha movido.
+   - **Captura:** El Callback de EXTI detecta el flanco y actualiza la posición lógica.
+   - **Acción de Reset:** Al presionar el switch del encoder, se dispara un evento que restablece el objetivo a 90°.
+
+2. **Dominio de Procesamiento (Lógica de Control):** En el lazo principal (`while(1)`), el sistema actúa como un **Sincronizador de Estados**:
+   - **Generación de Trayectoria:** El driver del servo calcula el siguiente paso basado en una velocidad de 150°/s (**Slew Rate**).
+   - **Filtro de Actualización:** El display y el log de UART solo se refrescan si el ángulo entero ha cambiado (`current_angle != last_angle`).
+
+3. **Dominio de Salida (Periféricos de Hardware):** El hardware gestiona las tareas de alta frecuencia mediante Timers:
+   - **PWM de Posición (TIM3):** Señal constante de 50Hz para el servo.
+   - **PWM Cromático (TIM4):** Mezcla de colores en el LED RGB según el ángulo.
+   - **Multiplexado (TIM2):** Refresco secuencial de los 3 dígitos cada 2ms.
+
+---
+
+## 🔍 Análisis de Implementación: Puntos Críticos del `main.c`
+
+### 1. El Paradigma de "Control por Eventos" (EXTI vs Polling)
+El sistema optimiza los ciclos de CPU al no preguntar constantemente por el estado del encoder. 
+- **Prioridad NVIC:** Se asignó una prioridad estratégica al `EXTI9_5_IRQn` para que el conteo de pasos sea preferente frente a tareas cosméticas.
+- **Abstracción en Callback:** La lógica de decodificación se delega al `KY040_IRQ_Handler`, manteniendo el `main.c` limpio de lógica de bajo nivel.
+
+### 2. Sincronización de Dominios: Encoder vs. Servo
+Se implementa un **desacople de objetivos** para evitar movimientos bruscos que dañarían la mecánica:
+- El **Encoder** define el `target_from_encoder` (intención del usuario).
+- El **Driver del Servo** gestiona la `current_angle` (realidad física).
+- **Interpolación Lineal:** La función `SERVO_SG90_SetSpeedAngle` permite que el servo "viaje" hacia el objetivo suavemente, imitando el comportamiento de sistemas industriales.
+
+### 3. Máquina de Estados para Feedback Visual
+Para optimizar el bus de datos y reducir el ruido electromagnético, la función `UI_Update_Feedback` utiliza una **guarda de estado**:
 
 ```c
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    // El driver gestiona internamente la máquina de estados de cuadratura
-    KY040_IRQ_Handler(&encoder_ctrl, GPIO_Pin);
+if (current_led_state != last_led_state) {
+    // Solo se actualiza el PWM del LED si el estado de color realmente cambió.
+    // Esto evita re-escrituras innecesarias en los registros CCR del Timer.
 }
 ```
-### 2. Lazo de Control No Bloqueante
+Aquí tenés todo integrado en un solo bloque de Markdown profesional, listo para que lo copies y pegues en tu README.md. He unificado los conceptos para que la narrativa pase de la arquitectura general a los puntos críticos del código.
+Markdown
 
-El `while(1)` orquesta la sincronización entre el encoder y el actuador sin detener el flujo del programa:
+---
+
+## 🏗️ Arquitectura de Software: Flujo de Datos y Concurrencia
+
+El sistema opera bajo un esquema de **Multitarea Cooperativa** y **Gestión por Interrupciones**, eliminando el uso de retardos bloqueantes (`HAL_Delay`). La arquitectura se divide en tres dominios que interactúan de forma asíncrona:
+
+1. **Dominio de Entrada (Eventos de Usuario):** El Encoder KY-040 genera interrupciones externas (**EXTI**) que son procesadas de inmediato. El software no "espera" al usuario; el hardware le avisa al procesador que la perilla se ha movido.
+   - **Captura:** El Callback de EXTI detecta el flanco y actualiza la posición lógica.
+   - **Acción de Reset:** Al presionar el switch del encoder, se dispara un evento que restablece el objetivo a 90°.
+
+2. **Dominio de Procesamiento (Lógica de Control):** En el lazo principal (`while(1)`), el sistema actúa como un **Sincronizador de Estados**:
+   - **Generación de Trayectoria:** El driver del servo calcula el siguiente paso basado en una velocidad de 150°/s (**Slew Rate**).
+   - **Filtro de Actualización:** El display y el log de UART solo se refrescan si el ángulo entero ha cambiado (`current_angle != last_angle`).
+
+3. **Dominio de Salida (Periféricos de Hardware):** El hardware gestiona las tareas de alta frecuencia mediante Timers:
+   - **PWM de Posición (TIM3):** Señal constante de 50Hz para el servo.
+   - **PWM Cromático (TIM4):** Mezcla de colores en el LED RGB según el ángulo.
+   - **Multiplexado (TIM2):** Refresco secuencial de los 3 dígitos cada 2ms.
+
+---
+
+## 🔍 Análisis de Implementación: Puntos Críticos del `main.c`
+
+### 1. El Paradigma de "Control por Eventos" (EXTI vs Polling)
+El sistema optimiza los ciclos de CPU al no preguntar constantemente por el estado del encoder. 
+- **Prioridad NVIC:** Se asignó una prioridad estratégica al `EXTI9_5_IRQn` para que el conteo de pasos sea preferente frente a tareas cosméticas.
+- **Abstracción en Callback:** La lógica de decodificación se delega al `KY040_IRQ_Handler`, manteniendo el `main.c` limpio de lógica de bajo nivel.
+
+
+
+### 2. Sincronización de Dominios: Encoder vs. Servo
+Se implementa un **desacople de objetivos** para evitar movimientos bruscos que dañarían la mecánica:
+- El **Encoder** define el `target_from_encoder` (intención del usuario).
+- El **Driver del Servo** gestiona la `current_angle` (realidad física).
+- **Interpolación Lineal:** La función `SERVO_SG90_SetSpeedAngle` permite que el servo "viaje" hacia el objetivo suavemente, imitando el comportamiento de sistemas industriales.
+
+### 3. Máquina de Estados para Feedback Visual
+Para optimizar el bus de datos y reducir el ruido electromagnético, la función `UI_Update_Feedback` utiliza una **guarda de estado**:
 
 ```c
-while (1) {
-    // 1. MOTOR: Calcula la posición intermedia (movimiento suave)
-    SERVO_SG90_Update(&servo_main);
-
-    // 2. CONTROL: Sincroniza el objetivo con el encoder
-    int32_t target_from_encoder = encoder_ctrl.position;
-    SERVO_SG90_SetSpeedAngle(&servo_main, (int)target_from_encoder, 150.0f);
-
-    // 3. HMI: Actualiza visualización solo si hay cambios (eficiencia)
-    if ((int)servo_main.current_angle != last_angle) {
-        last_angle = (int)servo_main.current_angle;
-        Display7Seg_WriteNumber(&Display, last_angle);
-        UI_Update_Feedback(last_angle); // Cambia color del LED
-    }
+if (current_led_state != last_led_state) {
+    // Solo se actualiza el PWM del LED si el estado de color realmente cambió.
+    // Esto evita re-escrituras innecesarias en los registros CCR del Timer.
 }
 ```
+
+### 4. Multiplexado de Display por Interrupción de Hardware
+
+El refresco del display de 7 segmentos está orquestado por el **TIM2**, garantizando una **Persistencia de Visión** perfecta.
+
+* **Refresco Asíncrono:** La función `Display7Seg_Refresh_ISR` se ejecuta en el background cada 2ms.
+* **Determinismo:** Los números se mantienen estables y brillantes sin importar la carga de procesamiento o la latencia de los logs UART en el lazo principal.
+
+---
+
+## 🔄 Diagrama de Flujo del Sistema
+
+graph TD
+    A[Encoder KY-040] -- EXTI Interrupción --> B(Actualizar Target Angle)
+    B --> C{Lazo Principal}
+    C --> D[Driver Servo: Interpolación de Velocidad]
+    D -- PWM TIM3 --> E[Actuador: Servo SG90]
+    D --> F{¿Cambió el Ángulo?}
+    F -- SI --> G[Actualizar Display 7-Seg]
+    F -- SI --> H[Actualizar Color LED RGB]
+    F -- SI --> I[Log por UART3]
+    F -- NO --> C
+    J[TIM2 Interrupción] -- Cada 2ms --> K[Refresco Físico Display]
+
+---
 
 ## 🗺️ Mapeo de Hardware y Configuración de Pines
 
@@ -103,7 +188,7 @@ La asignación de recursos se ha diseñado para evitar conflictos entre los cana
 
 
 ### Notas de Conexión:
-* **Servo SG90:** Se alimenta desde los 5V de la placa, pero la señal PWM es de 3.3V (compatible con el driver interno del servo).
+* **Servo SG90:** Se alimenta desde los 5V **externos**, pero la señal PWM es de 3.3V (compatible con el driver interno del servo).
 * **Encoder KY-040:** Requiere resistencias de *Pull-Up* activas (configuradas internamente en el STM32) debido a que es un dispositivo de colector abierto.
 * **Display 7 Segmentos:** Los pines de segmentos utilizan resistencias limitadoras de corriente para proteger los GPIOs del puerto E, F y G.
 
