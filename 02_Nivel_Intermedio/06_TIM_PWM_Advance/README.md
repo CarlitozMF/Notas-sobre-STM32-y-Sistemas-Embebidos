@@ -96,9 +96,6 @@ if (current_led_state != last_led_state) {
     // Esto evita re-escrituras innecesarias en los registros CCR del Timer.
 }
 ```
-Aquí tenés todo integrado en un solo bloque de Markdown profesional, listo para que lo copies y pegues en tu README.md. He unificado los conceptos para que la narrativa pase de la arquitectura general a los puntos críticos del código.
-Markdown
-
 ---
 
 ## 🏗️ Arquitectura de Software: Flujo de Datos y Concurrencia
