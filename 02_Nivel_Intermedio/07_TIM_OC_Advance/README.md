@@ -98,8 +98,7 @@ graph TD
 | **TIM5_CH1** | **PA0** | `BUZZER_SIG` | Señal cuadrada variable. Requiere transistor NPN. |
 | **TIM4_CH1** | **PD12** | `STROBE_RED` | PWM Grupo Rojo. |
 | **TIM4_CH2** | **PD13** | `STROBE_BLUE` | PWM Grupo Azul. |
-| **EXTI_11** | **PB11** | `BTN_EXT` | Botón N.O. a GND. **Requiere Capacitor 100nF** (Filtro HW). |
-| **UART3** | **PD8/PD9** | `CONSOLE` | Debugging y logs de cambio de estado. |
+| **EXTI_11** | **PB11** | `usr_btn_ext` | Botón N.A. a GND. **Requiere Capacitor 100nF** (Filtro HW). |
 
 ---
 
