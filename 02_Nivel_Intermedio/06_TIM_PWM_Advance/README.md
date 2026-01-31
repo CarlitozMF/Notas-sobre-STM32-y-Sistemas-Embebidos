@@ -133,8 +133,9 @@ La asignación de recursos se ha diseñado para evitar conflictos entre los cana
 | :--- | :--- | :--- | :--- |
 | **TIM3_CH2** | **PB5** | `SERVO_PWM` | **Control de Posición:** Salida PWM con resolución de 1μs. |
 | **TIM4_CH2-4**| **PD13-15** | `RGB_R/G/B` | **HMI Cromática:** Control de LED RGB mediante PWM de 1kHz. |
-| **EXTI 9_5** | **PF12** | `ENC_CLK` | **Reloj Encoder:** Dispara la IT para el conteo de pasos. |
-| **GPIO Input** | **PF13** | `ENC_DT` | **Sentido Encoder:** Determina dirección (CW/CCW). |
+| **EXTI 9_5**  |   **PB9** | `ENC_SW`  |   **Switch Encoder:** Resetea el Servo a 90 grados.    |
+| **EXTI 9_5** | **PB8** | `ENC_CLK` | **Reloj Encoder:** Dispara la IT para el conteo de pasos. |
+| **GPIO Input** | **PA5** | `ENC_DT` | **Sentido Encoder:** Determina dirección (CW/CCW). |
 | **TIM2** | **Interno** | `DISP_REFRESH` | **Base de Tiempo:** Interrupción de 2ms para multiplexado. |
 | **UART3** | **PD8/PD9** | `STLINK_VCP` | **Telemetría:** Debug Log a 115200 bps vía USB. |
 

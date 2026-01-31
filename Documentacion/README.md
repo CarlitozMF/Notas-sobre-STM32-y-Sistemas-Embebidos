@@ -49,23 +49,4 @@ Para asegurar que el código sea portátil entre diferentes micros ARM, usamos t
 
 ---
 
-## 4. Debugging y Live Expressions
-El IDE nos permite "ver" dentro del microcontrolador mientras el programa está corriendo.
-
-- **Breakpoints:** Hacen una pausa en una línea específica para analizar variables.
-- **Live Expressions:** Ventana que muestra el valor de las variables en tiempo real sin detener el microcontrolador. Ideal para ver cómo cambia el puntaje de un juego o el estado de un sensor.
-
-
-
----
-
-## 🛑 Troubleshooting (Resolución de Problemas)
-
-| Problema | Posible Causa | Solución |
-| :--- | :--- | :--- |
-| El código no hace nada | Reloj del periférico apagado. | Revisar **Clock Configuration** en el archivo `.ioc`. |
-| El micro se "cuelga" | Saltó al `Error_Handler()`. | Una función HAL devolvió un error (ej. UART mal configurada). |
-| No detecta la placa | Cable USB o Driver ST-Link. | Actualizar firmware desde `Help -> Check for ST-Link Updates`. |
-
----
 *Documentación creada por Carlitos MF - Tucumán, Argentina.*
