@@ -43,15 +43,15 @@ En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada
 
 ---
 
-## 🛠️ Roadmap de Laboratorios
+## 🛠️ Roadmap de Laboratorios *(-Actualizado 31/01/2026-)*
 1. **[01_EXTI_Pulsadores](./01_EXTI_Pulsadores):** Gestión de flancos y prioridades en el NVIC.
 2. **[02_TIM_Basic](./02_TIM_Basic):** Creación de bases de tiempo precisas para tareas cíclicas.
 3. **[03_TIM_PWM](./03_TIM_PWM/):** Control de potencia y efectos visuales asíncronos.
 4. **[04_TIM_Input_Capture](./04_TIM_Input_Capture):** Telemetría ultrasónica y digitalización de tiempo.
 5. **[05_TIM_Output_Compare](./05_TIM_Output_Compare):** Control de precisión para motor paso a paso (28BYJ-48).
-6. **[06_TIM_PWM_Advance](./06_TIM_PWM_Advance):** Control de posición mediante resolución temporal (Servomotor SG90). *(-En Desarrollo-)*
-7. **[07_TIM_OC_Advance](./07_TIM_OC_Advance):** Generación de tonos de audio mediante frecuencia variable (Buzzer Pasivo). *(-Proximamente-)*
-8. **[08_TIM_Slave_Mode](./08_TIM_Slave_Mode):** Sincronización de periféricos y frecuencímetro con sensor TCS3200. *(-Proximamente-)*
+6. **[06_TIM_PWM_Advance](./06_TIM_PWM_Advance):** Control de posición mediante resolución temporal (Servomotor SG90). 
+7. **[07_TIM_OC_Advance](./07_TIM_OC_Advance):** Generación de tonos de audio mediante frecuencia variable (Buzzer Pasivo).
+8. **[08_TIM_Slave_Mode](./08_TIM_Slave_Mode):** Sincronización de periféricos y frecuencímetro con sensor TCS3200. *(-En Desarrollo-)*
 9. **[09_TIM_One_Pulse](./09_TIM_One_Pulse):** Generación de pulsos determinísticos disparados por hardware. *(-Proximamente-)*
 10. **[10_TIM_Encoder](./10_TIM_Encoder):** Odometría y control de motores de cuadratura (Micromouse). *(-Proximamente-)*
 
