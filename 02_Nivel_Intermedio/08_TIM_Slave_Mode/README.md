@@ -277,15 +277,18 @@ El uso de `HAL_GetTick()` en el `Heartbeat_Handler` permite que el LED de estado
 
 ### Mapeo de Hardware: Nucleo-F439ZI
 
-Para este proyecto se han seleccionado periféricos con acceso directo a canales de Timer de 32 bits y comunicación asíncrona, optimizando el ruteo de señales en la placa:
+La asignación de pines se ha realizado optimizando el uso de funciones alternativas para evitar conflictos con el programador ST-LINK y garantizar el acceso a canales de Timer con alta resolución.
 
 | Periférico | Pin | Función | Configuración Técnica |
 | :--- | :--- | :--- | :--- |
-| **TIM3_CH1** | **PA6** | **Entrada de Frecuencia** | Captura del sensor TCS3200 (Slave Mode) |
-| **GPIO Out** | **PB2 / PB10** | **Control de Filtros** | Selección de S2 y S3 para multiplexado RGB |
-| **TIM5_CH1** | **PA0** | **Control PWM Servo** | Salida de 32 bits para control suave de SG90 |
-| **UART3** | **PD8 / PD9** | **Debug Log** | Telemetría serie y calibración en tiempo real |
-| **GPIO Out** | **PB0** | **LED de Estado** | Indicador Heartbeat (LD3 - Rojo) |
+| **TIM3** | **Interno** | **Maestro de Tiempo** | Genera interrupción cada 100ms para lectura isócrona. |
+| **TIM4_CH1** | **PA6** | **Entrada de Frecuencia** | Modo Esclavo (External Clock Mode 1) para conteo de pulsos. |
+| **TIM5_CH1** | **PA0** | **Control PWM Servo** | Salida de 32 bits para interpolación suave del brazo robótico. |
+| **TIM1_CH1/2/3** | **PE9/11/13** | **Interfaz RGB** | PWM de alta velocidad para retroalimentación visual. |
+| **GPIO Out** | **PC2 / PC3** | **Control de Filtros** | Manejo de pines **S2** y **S3** para multiplexado óptico. |
+| **GPIO Out** | **PG0 / PG1** | **Escalamiento/Habilitación** | Control de pines **S0** y **S1** (Frecuencia al 100%). |
+| **UART3** | **PD8 / PD9** | **Debug Log** | Transmisión serie a 115200 bps para telemetría. |
+| **GPIO Out** | **PB0** | **LED de Estado** | Indicador **Heartbeat** (LD3 - Rojo) de CPU viva. |
 
 ---
 
@@ -295,8 +298,6 @@ Durante la fase de integración, se identificó una situación crítica con la d
 
 * **Problema:** Debido a que el canal Azul y Verde del sensor TCS3200 tienen una respuesta espectral solapada, se producían "rebotes" lógicos entre el `ESTADO_AZUL` y el `ESTADO_CIAN` bajo ciertas condiciones de iluminación, provocando movimientos erráticos en el servomotor.
 * **Solución:** Se implementó un **Filtro de Estabilidad Temporal (Software Debounce)**. El sistema no actualiza la posición del brazo robótico hasta que el sensor confirma el mismo color durante $N$ ciclos de medición consecutivos ($N=2$). Esto garantiza la eliminación de ruidos transitorios y garantiza que el actuador solo responda a estados de color plenamente confirmados.
-
-
 
 ---
 
