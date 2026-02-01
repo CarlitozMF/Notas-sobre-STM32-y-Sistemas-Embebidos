@@ -51,7 +51,7 @@ En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada
 5. **[05_TIM_Output_Compare](./05_TIM_Output_Compare):** Control de precisión para motor paso a paso (28BYJ-48).
 6. **[06_TIM_PWM_Advance](./06_TIM_PWM_Advance):** Control de posición mediante resolución temporal (Servomotor SG90). 
 7. **[07_TIM_OC_Advance](./07_TIM_OC_Advance):** Generación de tonos de audio mediante frecuencia variable (Buzzer Pasivo).
-8. **[08_TIM_Slave_Mode](./08_TIM_Slave_Mode):** Sincronización de periféricos y frecuencímetro con sensor TCS3200. *(-En Desarrollo-)*
+8. **[08_TIM_Slave_Mode](./08_TIM_Slave_Mode):** Sincronización de periféricos y frecuencímetro con sensor TCS3200.
 9. **[09_TIM_One_Pulse](./09_TIM_One_Pulse):** Generación de pulsos determinísticos disparados por hardware. *(-Proximamente-)*
 10. **[10_TIM_Encoder](./10_TIM_Encoder):** Odometría y control de motores de cuadratura (Micromouse). *(-Proximamente-)*
 

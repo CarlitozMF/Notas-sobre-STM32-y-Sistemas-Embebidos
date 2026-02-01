@@ -282,13 +282,14 @@ La asignación de pines se ha realizado optimizando el uso de funciones alternat
 | Periférico | Pin | Función | Configuración Técnica |
 | :--- | :--- | :--- | :--- |
 | **TIM3** | **Interno** | **Maestro de Tiempo** | Genera interrupción cada 100ms para lectura isócrona. |
-| **TIM4_CH1** | **PA6** | **Entrada de Frecuencia** | Modo Esclavo (External Clock Mode 1) para conteo de pulsos. |
+| **TIM4_CH1** | **PB6** | **Entrada de Frecuencia** | Modo Esclavo (External Clock Mode 1) para conteo de pulsos. |
 | **TIM5_CH1** | **PA0** | **Control PWM Servo** | Salida de 32 bits para interpolación suave del brazo robótico. |
 | **TIM1_CH1/2/3** | **PE9/11/13** | **Interfaz RGB** | PWM de alta velocidad para retroalimentación visual. |
-| **GPIO Out** | **PC2 / PC3** | **Control de Filtros** | Manejo de pines **S2** y **S3** para multiplexado óptico. |
-| **GPIO Out** | **PG0 / PG1** | **Escalamiento/Habilitación** | Control de pines **S0** y **S1** (Frecuencia al 100%). |
+| **GPIO Out** | **PC10 / PC11** | **Control de Filtros** | Manejo de pines **S2** y **S3** para multiplexado óptico. |
+| **GPIO Out** | **PG2 / PG3** | **Escalamiento/Habilitación** | Control de pines **S0** y **S1** (Frecuencia al 100%). |
+| **GPIO Out** | **PF13** | **Control LED Sensor** | Activa la iluminación frontal del TCS3200 para normalizar la lectura. |
 | **UART3** | **PD8 / PD9** | **Debug Log** | Transmisión serie a 115200 bps para telemetría. |
-| **GPIO Out** | **PB0** | **LED de Estado** | Indicador **Heartbeat** (LD3 - Rojo) de CPU viva. |
+| **GPIO Out** | **PB8** | **LED de Estado** | Indicador **Heartbeat** (LD3 - Rojo) de CPU viva. |
 
 ---
 
