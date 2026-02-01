@@ -108,6 +108,21 @@ Esta capa opera mediante interrupciones y hardware autónomo, permitiendo que el
 * **Contador de Pulsos (TIM4):** Funciona de forma totalmente autónoma contando los pulsos digitales del sensor TCS3200 directamente en su registro `CNT`.
 * **Callback de Tiempo (TIM3):** Actúa como el "latido" del sistema. Cada 100ms se ejecuta la rutina `HAL_TIM_PeriodElapsedCallback`, cuya única misión es llamar a `TCS3200_ProcessCallback`. Esta función toma la "fotografía" del contador del TIM4 y levanta el flag `measurement_ready`.
 
+```c
+/**
+ * @brief Callback que se ejecuta cuando el TIM3 cumple su periodo (100ms).
+ * Actúa como la base de tiempo maestra para la captura del sensor.
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    // Verificamos que la interrupción venga del TIM3 (Metrónomo)
+    if (htim->Instance == TIM3) {
+        // Ejecutamos la lógica de captura: 
+        // Lee el TIM4 (Contador Esclavo) y levanta el flag measurement_ready
+        TCS3200_ProcessCallback(&colorSensor);
+    }
+}
+```
 
 ### 2. Capa de Lógica y Decisión (Primer Plano / Middleware)
 Es el "cerebro" del firmware. Transforma frecuencias crudas en conceptos de color. Se ejecuta en el bucle principal (`while(1)`) pero de forma asíncrona:
@@ -118,12 +133,67 @@ Es el "cerebro" del firmware. Transforma frecuencias crudas en conceptos de colo
     * **Histéresis:** Implementa la estructura `Config_Umbrales_t` para otorgar estabilidad al estado Blanco, evitando oscilaciones por variaciones lumínicas.
     * **Confirmación (Debounce):** Utiliza un acumulador de estabilidad. Solo si un color es detectado de forma persistente durante 2 ciclos consecutivos, se valida el cambio de `estado_actual`.
 
+```c
+void Procesar_Logica_Color(void) {
+    colorSensor.measurement_ready = 0; // Ack de la medición
+
+    // 1. SECUENCIADOR: Solo procesamos cuando el ciclo RGB está completo
+    if (filtro_actual == 2) {
+        uint32_t r = colorSensor.frequency_red;
+        uint32_t g = colorSensor.frequency_green;
+        uint32_t b = colorSensor.frequency_blue;
+        uint8_t nuevo_estado_raw;
+
+        // 2. HISTÉRESIS: Umbral variable para el color Blanco
+        uint32_t limite_blanco = (estado_actual == ESTADO_BLANCO) ? 
+                                  umbrales.blanco_salir : umbrales.blanco_entrar;
+
+        // 3. DISCRIMINACIÓN: Lógica de decisión por dominancia (Ejemplo Cian)
+        if (b > r && g > r && (g > (b >> 1))) {
+            nuevo_estado_raw = ESTADO_CIAN;
+        } 
+        // ... (resto de la FSM)
+
+        // 4. DEBOUNCE: Confirmación de estabilidad (N=2)
+        if (nuevo_estado_raw != estado_actual) {
+            contador_estabilidad++;
+            if (contador_estabilidad >= umbrales.estabilidad_requerida) {
+                estado_actual = nuevo_estado_raw; // Cambio de estado validado
+                Ejecutar_Accion_Actuadores(estado_actual);
+            }
+        }
+    }
+    // Rotación de filtros S2/S3
+    Siguiente_Filtro(); 
+}
+```
 
 ### 3. Capa de Aplicación y Actuadores (Salida)
 Representa la respuesta física del sistema ante los estímulos procesados:
 
 * **Control de Trayectoria (Servo):** Mediante la función `SERVO_SG90_Update`, el servomotor implementa una interpolación lineal. Esto evita movimientos bruscos ("latigazos"), calculando pequeños incrementos de ángulo en cada iteración del bucle principal para lograr un movimiento fluido.
 * **Retroalimentación Visual:** El driver de LED RGB traduce el estado de la FSM en una señal lumínica en tiempo real, facilitando el diagnóstico visual del proceso de clasificación.
+
+```c
+// --- Dentro de Procesar_Logica_Color (Cuando el estado se valida) ---
+switch (estado_actual) {
+    case ESTADO_CIAN:
+        RGB_Set_Preset(&ledRGB, COLOR_CYAN);               // Feedback Visual
+        SERVO_SG90_SetSpeedAngle(&servoBrazo, 100, 180.0f); // Trayectoria Suave
+        Debug_Log(">> ESTABLE: CIAN\r\n");
+        break;
+    // ... otros estados
+}
+
+// --- Dentro del bucle principal (while 1) ---
+while (1) {
+    // La función Update calcula los pasos intermedios del PWM en cada ciclo
+    // permitiendo que el brazo se mueva a una velocidad constante (dps)
+    SERVO_SG90_Update(&servoBrazo); 
+    
+    Heartbeat_Handler(); // Diagnóstico independiente
+}
+```
 
 ```mermaid
 graph TD
