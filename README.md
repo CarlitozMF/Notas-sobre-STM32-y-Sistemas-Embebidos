@@ -37,6 +37,9 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **Lógica de Control:** *Máquinas de Estado Finitos (MEF) y Debounce No Bloqueante.*
 * **Modularidad:** *Creación de Drivers (APIs) para periféricos simples.*
 
+#### **Proyectos Integradores Nivel Básico**
+* **Contador_Up_Down_7Seg** | **Semaforo_Smart** | **Simon_Dice** | **Integración de APIs y Modularidad.**
+
 ### ⚙️ [02_Nivel Intermedio (Periféricos y Eficiencia)](./02_Nivel_Intermedio/) - 🚀 EN CURSO -
 *Transición hacia el procesamiento basado en eventos y autonomía del hardware:*
 
@@ -45,10 +48,12 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **Adquisición (Fase 3):** *ADC avanzado: Scan Mode, IT y Sincronización por Timer.*
 * **Comunicaciones (Fase 4):** *Protocolos industriales: UART (IT), I2C, SPI y CAN Bus.*
 
-#### **Proyectos Integradores Nivel 2**
-* **Contador_RealTime_7Seg** | **Alarma_Monostable_OPM** | **Smart_Power_Meter (WIP)**
+#### **Proyectos Integradores Nivel Intermedio**
+* **Contador_RealTime_7Seg**  | **...** | **.** 
 
 ### 🚀 [03_Nivel Avanzado (Arquitectura de alto rendimiento)](./03_Nivel_Avanzado/) - PROXIMAMENTE -
+*Arquitecturas de alto rendimiento: El salto hacia la gestión masiva de datos con DMA, procesamiento de señales (DSP) y la multiprogramación en tiempo real con RTOS.*
+
 * **DMA Mastery:** *Transferencia masiva de datos con carga cero de CPU.*
 * **RTOS:** *Sistemas Operativos de Tiempo Real (FreeRTOS) y Multitarea.*
 * **DSP & Low Power:** *Procesamiento de señales y optimización energética extrema.*
@@ -65,6 +70,20 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 ---
 
 <div align="center">
-  <p><i>"El programador deja de controlar el flujo y empieza a orquestar los eventos del hardware."</i></p>
-  <p><i>Notas creadas durante mi proceso de estudio en la UTN FRT.</i></p>
+  <h3>💎 Filosofía del Repositorio</h3>
+  <p>
+    <i>
+      "Desde el control manual del bit hasta la orquestación autónoma del silicio. 
+      Este espacio documenta la transición del programador secuencial al arquitecto de sistemas reactivos, 
+      donde cada microsegundo cuenta y el determinismo es la regla de oro."
+    </i>
+  </p>
+  
+  <p>
+    <b>Precisión • Eficiencia • Autonomía</b>
+  </p>
+  
+  <p>
+    🚀 <b>Notas-sobre-STM32-y-Sistemas-Embebidos creadas durante mi proceso de estudio</b> | <b>Carlos - UTN FRT 2026</b>
+  </p>
 </div>
