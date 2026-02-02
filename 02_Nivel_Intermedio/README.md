@@ -58,7 +58,7 @@ Captura del mundo físico y conversión en datos procesables con precisión de n
     * **Interrupt (IT):** Notificación al CPU mediante el NVIC al completar una conversión o secuencia.
     * **Analog Watchdog:** Monitorización por hardware que dispara una interrupción solo si la señal sale de un umbral predefinido (Límite Superior/Inferior).
 
-### 4. Comunicación y Conectividad 📬
+### 5. Comunicación y Conectividad 📬
 Estandarización del diálogo con el mundo exterior mediante protocolos industriales. La conectividad es el pilar que permite la telemetría, el control remoto y la integración en redes de datos.
 
 * **Protocolos Soportados:**
