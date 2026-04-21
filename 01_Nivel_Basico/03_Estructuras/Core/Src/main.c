@@ -28,38 +28,19 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-/* USER CODE END PTD */
+/* --- ESTRUCTURAS PARA CONTROL DE HARDWARE --- */
 
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
+//Estructura para definir los pines y puertos a controlar
+typedef struct {
+    GPIO_TypeDef* port;  // GPIOA, GPIOB, etc.
+    uint16_t pin;       // GPIO_PIN_0, etc.
+} GPIO_Config_t;
 
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart3;
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_USART3_UART_Init(void);
-/* USER CODE BEGIN PFP */
-
-/* Prototipos de funciones */
-void Debug_Log(const char *msg);
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+// Estructura para definir un arreglo de leds
+typedef struct {
+    GPIO_Config_t* leds; // Puntero a un arreglo de configuraciones
+    //uint8_t count;       // Cantidad de LEDs
+} Leds_t;
 
 /* --- ESTRUCTURAS PARA LA LECCIÓN --- */
 
@@ -82,7 +63,55 @@ typedef struct {
 } Estructura_Flaca_t;
 
 
-/* Función de asistencia */
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart3;
+
+/* USER CODE BEGIN PV */
+
+/* --- APLICACION DE LAS ESTRUCUTRAS DE CONTROL DE HARDWARE --- */
+// 1. Definimos los pines físicos (pueden ser de cualquier puerto) mediante un arreglo de estructuras
+GPIO_Config_t configuracion_leds[] = {
+    {GPIOB, GPIO_PIN_0},
+	{GPIOB, GPIO_PIN_7},
+    {GPIOB, GPIO_PIN_14}
+};
+
+// 2. Inicializamos la estructura usando la constante calculada
+Leds_t barra_leds = {configuracion_leds};
+
+// 3. Usamos sizeof para calcular la cantidad de elementos automáticamente
+// Fórmula: Tamaño total del arreglo / Tamaño de un solo elemento
+#define LED_COUNT (sizeof(configuracion_leds) / sizeof(configuracion_leds[0]))
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART3_UART_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* Prototipos de funciones */
+void Debug_Log(const char *msg);	//Funcion UART
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* Definicion de la función de asistencia por UART*/
 void Debug_Log(const char *msg) {
     HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
 }
@@ -153,9 +182,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  // Toggle LED para saber que el micro sigue vivo
-	      HAL_GPIO_TogglePin(GPIOB, LD1_Pin);
-	      HAL_Delay(1000);
+      for (int i = 0; i < LED_COUNT; i++)
+      {
+          HAL_GPIO_WritePin(barra_leds.leds[i].port, barra_leds.leds[i].pin, GPIO_PIN_SET);
+          HAL_Delay(100);
+          HAL_GPIO_WritePin(barra_leds.leds[i].port, barra_leds.leds[i].pin, GPIO_PIN_RESET);
+      }
   }
   /* USER CODE END 3 */
 }

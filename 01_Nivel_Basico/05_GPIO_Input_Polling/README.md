@@ -12,8 +12,6 @@ Este módulo aborda la lectura de señales externas (periféricos de entrada) ut
 ## ⚡ El Desafío Físico: Rebote Mecánico (Bounce)
 Al presionar un botón, las láminas metálicas internas vibran y chocan entre sí durante unos milisegundos antes de establecer un contacto estable. 
 
-
-
 Para una **STM32F439ZI** que ejecuta millones de instrucciones por segundo, estas vibraciones se interpretan como múltiples pulsaciones ultra rápidas. Sin un sistema de filtrado, una sola presión del usuario dispararía la lógica del programa decenas de veces de forma errática.
 
 ---
@@ -51,4 +49,8 @@ if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET)
 * Hacia el Nivel Intermedio: En etapas posteriores, reemplazaremos este esquema por Interrupciones Externas (EXTI) para lograr una respuesta inmediata y no bloqueante.
 
 ---
+
 *En sistemas embebidos, el software debe ser capaz de filtrar la imperfección del mundo físico para transformarla en lógica digital confiable.*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

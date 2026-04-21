@@ -46,6 +46,7 @@ UART_HandleTypeDef huart3;
 /* USER CODE BEGIN PV */
 
 /* Variables Globales */
+
 // Usamos volatile para demostrar que esta variable puede cambiar fuera del flujo normal
 volatile uint8_t flag_sistema = 1;
 
@@ -66,6 +67,7 @@ void Debug_Log(const char *msg);
 /* USER CODE BEGIN 0 */
 
 /* --- Definición de Funciones Propias --- */
+
 /**
  * @brief Envía una cadena de texto a través de la UART3 hacia la PC.
  */

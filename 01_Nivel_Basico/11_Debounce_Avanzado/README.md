@@ -5,8 +5,6 @@ Este es el proyecto final del **Nivel Básico**. Representa la integración tota
 ## 🧠 El Problema: El Rebote Mecánico (Bouncing)
 Cuando un interruptor mecánico se cierra, las láminas metálicas vibran y colisionan durante unos milisegundos antes de establecer un contacto estable. 
 
-
-
 Para un microcontrolador como el **STM32F439ZI**, estos rebotes de ~20-40ms se interpretan como cientos de pulsaciones falsas. La solución profesional no es "congelar" el micro con un delay, sino implementar una MEF que filtre el ruido de forma asíncrona.
 
 ---
@@ -19,8 +17,6 @@ A diferencia de una MEF simple, este driver es **reentrante**. Esto significa qu
 2. **`BUTTON_FALLING`**: Se detecta un cambio inicial. Se inicia la ventana de validación (40ms).
 3. **`BUTTON_DOWN`**: La señal se mantuvo estable. Pulsación confirmada.
 4. **`BUTTON_RISING`**: Se detecta la apertura del contacto. Se inicia la validación de liberación.
-
-
 
 ---
 
@@ -77,4 +73,8 @@ Herramientas dominadas:
 *Hacia el Nivel Intermedio: Hemos llegado al límite del Polling. En el siguiente nivel, aprenderemos a configurar el hardware para que el CPU no tenga que "preguntar" constantemente; usaremos Interrupciones (EXTI) para que el hardware nos avise cuando algo ocurra.*
 
 ---
+
 *La ingeniería no consiste en evitar los problemas físicos del hardware, sino en diseñar el software capaz de absorberlos y entregar una respuesta lógica perfecta.*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

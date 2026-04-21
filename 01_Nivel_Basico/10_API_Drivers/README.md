@@ -78,4 +78,8 @@ int main(void) {
 * **Mantenibilidad:** Si el hardware cambia (ej: se reasignan pines), el while(1) permanece intacto; solo se actualiza la declaración de los objetos al inicio.
 
 ---
+
 *La modularidad es la herramienta que nos permite gestionar la complejidad; al abstraer el hardware, transformamos el silicio en un sistema flexible, escalable y profesional.*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

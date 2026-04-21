@@ -15,9 +15,7 @@ Este módulo representa la madurez técnica del Nivel Básico. Aplicamos **Abstr
 Para que el firmware sea flexible, eliminamos el "Hardcoding" (direcciones fijas). En lugar de llamar a un pin directamente, creamos una jerarquía de datos:
 
 1. **`GPIO_Config_t`**: Define la unidad mínima de hardware (Puerto + Pin).
-2. **`LedBar_t`**: Actúa como un "Contenedor de Objetos", agrupando la tabla de configuración y su metadato de tamaño.
-
-
+2. **`LedBar_t`**: Actúa como un "Contenedor de Objetos", agrupando la tabla de configuración.
 
 ```c
 typedef struct {
@@ -27,7 +25,6 @@ typedef struct {
 
 typedef struct {
     GPIO_Config_t* leds; // Referencia al arreglo de configuración
-    uint8_t count;       // Cantidad de elementos calculada dinámicamente
 } LedBar_t;
 ```
 
@@ -47,7 +44,7 @@ $$\text{Cantidad de elementos} = \frac{\text{sizeof(arreglo completo)}}{\text{si
 Gracias a que la estructura LedBar_t conoce su propio tamaño, el bucle for se vuelve universal. No importa si los LEDs están en el Puerto A o en el F; la lógica de animación permanece intacta:
 
 ```c
-for (int i = 0; i < miBarra.count; i++) {
+for (int i = 0; i < LED_COUNT; i++) {
     // La función HAL recibe los parámetros directamente de la estructura
     HAL_GPIO_WritePin(miBarra.leds[i].port, miBarra.leds[i].pin, GPIO_PIN_SET);
     HAL_Delay(100);
@@ -61,4 +58,8 @@ for (int i = 0; i < miBarra.count; i++) {
 * **Legibilidad:** El código del main() se vuelve mucho más humano y descriptivo, enfocándose en qué hace el sistema y no en cómo están conectados los cables.
 
 ---
+
 *El buen uso de las estructuras de datos transforma un conjunto disperso de pines en un sistema coherente, escalable y fácil de mantener.*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

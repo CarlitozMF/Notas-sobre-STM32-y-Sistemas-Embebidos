@@ -68,12 +68,12 @@ GPIO_Config_t configuracion_leds[] = {
     {GPIOD, GPIO_PIN_15}, {GPIOF, GPIO_PIN_12}
 };
 
-// 2. Usamos sizeof para calcular la cantidad de elementos automáticamente
+// 2. Inicializamos la estructura usando la constante calculada
+LedBar_t miBarraGenerica = {configuracion_leds};
+
+// 3. Usamos sizeof para calcular la cantidad de elementos automáticamente
 // Fórmula: Tamaño total del arreglo / Tamaño de un solo elemento
 #define LED_COUNT (sizeof(configuracion_leds) / sizeof(configuracion_leds[0]))
-
-// 3. Inicializamos la estructura usando la constante calculada
-LedBar_t miBarraGenerica = {configuracion_leds, LED_COUNT};
 
 /* USER CODE END PV */
 
@@ -130,7 +130,7 @@ int main(void)
   char buffer[64];
   Debug_Log("\r\n--- EJEMPLO 06: ESTRUCTURAS + SIZEOF AUTOMÁTICO ---\r\n");
 
-  sprintf(buffer, "Cantidad de LEDs detectada: %u\r\n", miBarraGenerica.count);
+  sprintf(buffer, "Cantidad de LEDs detectada: %u\r\n", LED_COUNT);
   Debug_Log(buffer);
 
   /* USER CODE END 2 */
@@ -144,7 +144,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	  // El bucle for ahora es 100% dinámico
-	      for (int i = 0; i < miBarraGenerica.count; i++)
+	      for (int i = 0; i < LED_COUNT; i++)
 	      {
 	          HAL_GPIO_WritePin(miBarraGenerica.leds[i].port,
 	                            miBarraGenerica.leds[i].pin,
@@ -154,7 +154,6 @@ int main(void)
 	                            miBarraGenerica.leds[i].pin,
 	                            GPIO_PIN_RESET);
 	      }
-	      HAL_Delay(500);
 
   }
   /* USER CODE END 3 */

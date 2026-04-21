@@ -19,11 +19,9 @@ Este módulo profundiza en la manipulación quirúrgica de bits dentro de regist
 | **`^`** | **XOR** | Invierte el bit si la máscara es `1`. | **TOGGLE:** Conmutar el estado de un LED. |
 | **`<<` / `>>`**| **Shift**| Desplaza los bits a los lados. | **OFFSET:** Ubicar un valor en el bit exacto. |
 
-
-
 ---
 
-## 🛰️ Caso de Uso: El protocolo I2C y el bit R/W
+## 🛰️ Caso de Uso 1: El protocolo I2C y el bit R/W
 
 En el protocolo **I2C**, las direcciones de los esclavos suelen ser de **7 bits**. Sin embargo, el hardware del bus requiere un byte completo (8 bits) para funcionar, donde el bit menos significativo (LSB) indica la operación: **Lectura (1)** o **Escritura (0)**.
 
@@ -34,7 +32,15 @@ En el protocolo **I2C**, las direcciones de los esclavos suelen ser de **7 bits*
    - Para **Escribir**: `(0x3C << 1) | 0x00` $\rightarrow$ `0x78`
    - Para **Leer**: `(0x3C << 1) | 0x01` $\rightarrow$ `0x79`
 
+## 🛰️ Caso de Uso 2: Extracción de Bits para el manejo de displays de 7 segmentos
 
+Descomponer un número binario para *controlar* un display de 7 segmentos. Se trata de estar **"mapeando"** cada bit de una variable llamada `patron` a un pin físico del microcontrolador.
+```c
+   uint8_t estado = (patron >> i) & 0x01;
+```
+
+1. **Shift Right (`>> i`):** Mueve los bits de la variable *hacia la derecha i posiciones*. Esto pone el bit que te interesa en la posición menos significativa (la posición 0).
+2. **AND Mask (`& 0x01`):** "Limpia" todo lo demás. Al hacer un *AND con 0x01* (que en binario es 00000001), **aseguras** que el resultado sea únicamente un 1 o un 0, dependiendo de si ese bit específico estaba encendido.
 
 ---
 
@@ -74,4 +80,8 @@ En este laboratorio utilizamos el especificador %02X para telemetría.
    * 0xF es 1111. Esto permite identificar instantáneamente qué bit está encendido dentro de un registro de control de la STM32F439ZI simplemente mirando el código hexadecimal.
 
 ---
+
 *Dominar la lógica de bits es el primer paso para dejar de usar el microcontrolador como una caja negra y empezar a orquestar el hardware desde sus registros.*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

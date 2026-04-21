@@ -63,4 +63,8 @@ Debemos entender que HAL_Delay(ms) es un mecanismo de espera ocupada (Busy-Wait)
 * Conclusión: Esta técnica es aceptable para prototipos simples, pero en aplicaciones profesionales será reemplazada por Timers y Gestión de Tiempo No Bloqueante (visto en laboratorios posteriores).
 
 ---
+
 *Notas sobre la clásica primera práctica de programación adaptada a los sistemas embebidos*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

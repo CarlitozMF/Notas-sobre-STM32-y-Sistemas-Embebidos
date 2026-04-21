@@ -80,4 +80,8 @@ Durante la ejecución, se observa que al enviar mensajes largos por UART, el par
 * Hacia el Nivel Intermedio: Este problema justifica la evolución hacia el uso de Interrupciones (IT) o DMA (Direct Memory Access) para que la comunicación serie ocurra en segundo plano sin afectar la latencia de la Máquina de Estados.
 
 ---
+
 *Una Máquina de Estados bien diseñada es la base de un sistema embebido determinista; el manejo de la telemetría es lo que nos permite certificar su correcto funcionamiento.*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

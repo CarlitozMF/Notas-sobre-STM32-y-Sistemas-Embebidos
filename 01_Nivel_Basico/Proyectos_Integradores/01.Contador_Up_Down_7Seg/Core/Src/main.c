@@ -39,8 +39,7 @@ typedef struct {
 // Representa el display de catado comun
 typedef struct {
     GPIO_Config_t* leds; // Puntero a un arreglo de configuraciones
-    uint8_t count;       // Cantidad de LEDs
-} LedBar_t;
+} Display_t;
 
 /* USER CODE END PTD */
 
@@ -60,6 +59,8 @@ UART_HandleTypeDef huart3;
 /* USER CODE BEGIN PV */
 
 uint8_t contador = 0;
+uint8_t btn_up_last = 1;
+uint8_t btn_down_last = 1;
 
 /* Mapa de bits para Cátodo Común (1 = Encendido) */
 /* Orden de bits: 0 g f e d c b a */
@@ -80,22 +81,17 @@ const uint8_t segmento_map[] = {
 
 // Mapeo físico: Conecta los segmentos A-G a los pines que prefieras
 GPIO_Config_t pines_display[] = {
-    {GPIOB, GPIO_PIN_8}, // Segmento A
-    {GPIOB, GPIO_PIN_9}, // Segmento B
-    {GPIOA, GPIO_PIN_5}, // Segmento C
-    {GPIOA, GPIO_PIN_6}, // Segmento D
-    {GPIOA, GPIO_PIN_7}, // Segmento E
-    {GPIOD, GPIO_PIN_14}, // Segmento F
-    {GPIOD, GPIO_PIN_15}  // Segmento G
+    {SEG_A_GPIO_Port, SEG_A_Pin}, // Segmento A
+    {SEG_B_GPIO_Port, SEG_B_Pin}, // Segmento B
+    {SEG_C_GPIO_Port, SEG_C_Pin}, // Segmento C
+    {SEG_D_GPIO_Port, SEG_D_Pin}, // Segmento D
+    {SEG_E_GPIO_Port, SEG_E_Pin}, // Segmento E
+    {SEG_F_GPIO_Port, SEG_F_Pin}, // Segmento F
+    {SEG_G_GPIO_Port, SEG_G_Pin}  // Segmento G
 };
 #define SEGMENT_COUNT (sizeof(pines_display) / sizeof(pines_display[0]))
 
-LedBar_t miDisplay = {pines_display, SEGMENT_COUNT};
-
-// Mapeo de botones
-GPIO_TypeDef* BTN_PORT = GPIOB;
-uint16_t BTN_UP = GPIO_PIN_10;
-uint16_t BTN_DOWN = GPIO_PIN_11;
+Display_t miDisplay = {pines_display};
 
 /* USER CODE END PV */
 
@@ -122,7 +118,7 @@ void Display_Write(uint8_t numero) {
 
     uint8_t patron = segmento_map[numero];
 
-    for (int i = 0; i < miDisplay.count; i++) {
+    for (int i = 0; i < SEGMENT_COUNT; i++) {
         // Extraemos el bit 'i' usando desplazamiento y máscara
         uint8_t estado = (patron >> i) & 0x01;
         HAL_GPIO_WritePin(miDisplay.leds[i].port, miDisplay.leds[i].pin, estado);
@@ -132,7 +128,7 @@ void Display_Write(uint8_t numero) {
 void Display_Blink(uint8_t numero, uint8_t repeticiones) {
     for (int i = 0; i < repeticiones; i++) {
         // Apagar todos los segmentos (Iteramos sobre nuestra estructura)
-        for (int j = 0; j < miDisplay.count; j++) {
+        for (int j = 0; j < SEGMENT_COUNT; j++) {
             HAL_GPIO_WritePin(miDisplay.leds[j].port, miDisplay.leds[j].pin, GPIO_PIN_RESET);
         }
         HAL_Delay(150); // Tiempo apagado
@@ -180,7 +176,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  Display_Write(0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -190,56 +186,46 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  // 1. Detectar si CUALQUIERA de los dos se presionó (Lógica inversa: RESET = presionado)
-	      if (HAL_GPIO_ReadPin(BTN_PORT, BTN_UP) == GPIO_PIN_RESET ||
-	          HAL_GPIO_ReadPin(BTN_PORT, BTN_DOWN) == GPIO_PIN_RESET)
-	      {
-	          // Pequeña espera (ventana de tiempo) para dar chance a que el dedo presione el segundo botón
-	          HAL_Delay(50);
 
-	          // 2. Ahora sí, preguntamos: ¿Están AMBOS presionados?
-	          if (HAL_GPIO_ReadPin(BTN_PORT, BTN_UP) == GPIO_PIN_RESET &&
-	              HAL_GPIO_ReadPin(BTN_PORT, BTN_DOWN) == GPIO_PIN_RESET)
-	          {
-	              contador = 0;
-	              Debug_Log("ACCION: RESET\r\n");
-	              Display_Write(contador);
-	              // Esperar a que suelte ambos botones
-	              while(HAL_GPIO_ReadPin(BTN_PORT, BTN_UP) == GPIO_PIN_RESET ||
-	                    HAL_GPIO_ReadPin(BTN_PORT, BTN_DOWN) == GPIO_PIN_RESET);
-	          }
+	  uint8_t btn_up_now = HAL_GPIO_ReadPin(BTN_UP_GPIO_Port, BTN_UP_Pin);
+	  uint8_t btn_down_now = HAL_GPIO_ReadPin(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin);
 
-	          // 3. Si no fueron ambos, ¿fue solo UP?
-	          else if (HAL_GPIO_ReadPin(BTN_PORT, BTN_UP) == GPIO_PIN_RESET)
-	          {
-	              if (contador < 9){
-	            	  contador++;
-	              	  Debug_Log("ACCION: UP\r\n");
-	              	  Display_Write(contador);
-	              }else{
-	            	  // Si ya es 9 e intenta subir, parpadea el 9
-	            	    Debug_Log("AVISO: Límite máximo alcanzado\r\n");
-	            	    Display_Blink(9, 3); // Parpadea el '9', 3 veces
-	              }
-	              while(HAL_GPIO_ReadPin(BTN_PORT, BTN_UP) == GPIO_PIN_RESET);
-	          }
+	  // 1. Detección de flanco (Transición de 1 a 0)
+	  if ((btn_up_now == 0 && btn_up_last == 1) || (btn_down_now == 0 && btn_down_last == 1))
+	  {
+	      HAL_Delay(50); // Debounce simple (mejorable con timers)
 
-	          // 4. Si no fue el anterior, ¿fue solo DOWN?
-	          else if (HAL_GPIO_ReadPin(BTN_PORT, BTN_DOWN) == GPIO_PIN_RESET)
-	          {
-	              if (contador > 0){
-	            	  contador--;
-	            	  Debug_Log("ACCION: DOWN\r\n");
-	            	  Display_Write(contador);
-	              }else{
-	            	  // Si ya es 0 e intenta bajar, parpadea el 0
-	            	    Debug_Log("AVISO: Límite mínimo alcanzado\r\n");
-	            	    Display_Blink(0, 3); // Parpadea el '0', 3 veces
-	              }
-	              while(HAL_GPIO_ReadPin(BTN_PORT, BTN_DOWN) == GPIO_PIN_RESET);
+	      // Volvemos a leer después del debounce
+	      btn_up_now = HAL_GPIO_ReadPin(BTN_UP_GPIO_Port, BTN_UP_Pin);
+	      btn_down_now = HAL_GPIO_ReadPin(BTN_DOWN_GPIO_Port, BTN_DOWN_Pin);
+
+	      // 2. Lógica de decisión
+	      if (btn_up_now == 0 && btn_down_now == 0) {
+	          contador = 0;
+	          Debug_Log("ACCION: RESET\r\n");
+	      }
+	      else if (btn_up_now == 0) {
+	          if (contador < 9) {
+	              contador++;
+	              Debug_Log("ACCION: UP\r\n");
+	          } else {
+	              Display_Blink(9, 2);
 	          }
 	      }
+	      else if (btn_down_now == 0) {
+	          if (contador > 0) {
+	              contador--;
+	              Debug_Log("ACCION: DOWN\r\n");
+	          } else {
+	              Display_Blink(0, 2);
+	          }
+	      }
+	      Display_Write(contador);
+	  }
 
+	  // 3. Actualizar estado anterior para la siguiente vuelta
+	  btn_up_last = btn_up_now;
+	  btn_down_last = btn_down_now;
   }
   /* USER CODE END 3 */
 }
@@ -351,17 +337,17 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, SEG_C_Pin|SEG_D_Pin|SEG_E_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin|GPIO_PIN_8
-                          |GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin|SEG_A_Pin
+                          |SEG_B_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOF, GPIO_PIN_12, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, SEG_F_Pin|SEG_G_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
@@ -372,17 +358,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA5 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
+  /*Configure GPIO pins : SEG_C_Pin SEG_D_Pin SEG_E_Pin */
+  GPIO_InitStruct.Pin = SEG_C_Pin|SEG_D_Pin|SEG_E_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin PB8
-                           PB9 */
-  GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin|GPIO_PIN_8
-                          |GPIO_PIN_9;
+  /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin SEG_A_Pin
+                           SEG_B_Pin */
+  GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin|SEG_A_Pin
+                          |SEG_B_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -395,14 +381,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB10 PB11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+  /*Configure GPIO pins : BTN_UP_Pin BTN_DOWN_Pin */
+  GPIO_InitStruct.Pin = BTN_UP_Pin|BTN_DOWN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PD14 PD15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : SEG_F_Pin SEG_G_Pin */
+  GPIO_InitStruct.Pin = SEG_F_Pin|SEG_G_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

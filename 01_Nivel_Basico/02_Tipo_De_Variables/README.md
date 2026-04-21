@@ -78,4 +78,8 @@ void Debug_Log(const char *msg) {
 }
 ```
  ---
+ 
  *Notas creadas durante el estudio de gestión eficiente de recursos*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.
