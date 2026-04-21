@@ -17,38 +17,45 @@ Al finalizar este nivel, se habrán consolidado los cimientos técnicos necesari
 
 ---
 
-## 🚀 Pilares del Nivel Básico
+## 🚀 Pilares del Nivel Básico (Consolidados)
 
-### 1. Manipulación de Datos y Bits 🔢
-El lenguaje del microcontrolador. Sin el dominio del bit, no hay control real sobre el hardware.
-* **Bitwise Logic:** Uso de operadores `&`, `|`, `^` y `~` para modificar registros de periféricos sin alterar bits adyacentes.
-* **Portabilidad:** Implementación de `uint8_t`, `int16_t`, etc., para asegurar que el código se comporte igual en un STM32 que en cualquier otro procesador.
+### 1. Manipulación de Bits y Operaciones Atómicas 🔢
+Dominio del lenguaje nativo del microcontrolador para interactuar con registros y periféricos sin efectos colaterales.
+* **Máscaras de Bits:** Uso experto de operadores `&`, `|`, `^` y `~` para la manipulación selectiva de bits.
+* **Serialización Manual:** Aplicación de desplazamientos (*bit-shifting*) para convertir datos lógicos en señales físicas, permitiendo el control de buses de datos dispersos.
 
-### 2. Gestión de GPIO (General Purpose I/O) 🔌
-El primer puente con el mundo físico.
-* **Modos de Configuración:** Pull-up, Pull-down, Push-Pull y Open-Drain.
-* **Lectura por Polling:** Monitoreo constante del estado de pines de entrada y gestión del fenómeno físico del **Rebote (Bounce)**.
+### 2. Abstracción de Hardware y Funciones Agnósticas 🏗️
+Separación total entre la lógica del problema y los pines específicos del silicio.
+* **Hardware Mapping:** Implementación de etiquetas y descriptores que permiten cambiar el MCU o el conexionado sin modificar la lógica de aplicación.
+* **Funciones Agnósticas:** Creación de subrutinas que operan sobre estructuras de datos en lugar de pines fijos, logrando un código portable, reutilizable y reentrante.
 
-### 3. Interfaz de Usuario y Multiplexación 💡
-Optimización de recursos y visualización de datos.
-* **Look-up Tables:** Creación de tablas de búsqueda para decodificación eficiente (BCD a 7 segmentos).
-* **Persistencia de la Visión (POV):** Implementación de multiplexación temporal para controlar múltiples dispositivos con el mínimo de pines posibles.
+### 3. Arquitectura de Drivers y Encapsulamiento 🛠️
+Evolución hacia módulos de software profesionales, escalables y fáciles de mantener.
+* **Encapsulamiento mediante Estructuras:** Uso de `structs` para agrupar descriptores de hardware, tratando a los periféricos como "objetos" lógicos dentro de C puro.
+* **Modularidad de Archivos:** Organización estricta en archivos de cabecera (`.h`) para la interfaz y fuente (`.c`) para la implementación, con control de visibilidad mediante `static` y `extern`.
 
-### 4. Arquitectura de Drivers y Encapsulamiento 🏗️
-El paso definitivo hacia la programación profesional. Aquí el enfoque cambia de "hacer que ande" a "hacer que sea mantenible".
-* **Modularidad (Archivos .h / .c):** Separación de responsabilidades. El archivo de cabecera (`.h`) define la interfaz (qué hace el driver), mientras que el archivo fuente (`.c`) oculta la implementación (cómo lo hace).
-* **Encapsulamiento de Hardware:** Uso de estructuras y descriptores para manejar periféricos como "objetos", evitando el uso de variables globales dispersas y protegiendo el estado interno del hardware.
-* **Abstracción de Capas:** Creación de una capa de software propia sobre la HAL, permitiendo que la lógica de aplicación sea independiente del pinout o del hardware específico.
-* **Uso de `static` y `extern`:** Control estricto del alcance (*scope*) de las funciones y variables para evitar colisiones de nombres y accesos no autorizados a registros críticos.
+### 4. Sistemas Reactivos y No Bloqueantes (MEF) ⏱️
+El fin del uso de delays bloqueantes para permitir un multitasking real y eficiente.
+* **Máquinas de Estados Finitos (MEF):** Modelado de la lógica del sistema mediante estados y transiciones determinísticas, eliminando el "código espagueti".
+* **Gestión de Tiempos Asíncrona:** Sustitución de `HAL_Delay()` por comparaciones de tiempos y banderas de estado, liberando ciclos de CPU para procesar múltiples tareas en paralelo.
 
 ---
 
 ## 🏗️ Arquitectura de Software Aplicada
-En esta etapa, se establecen las bases de la organización del código profesional:
+En esta etapa, se trasciende la programación secuencial para adoptar una organización de código profesional basada en la **Jerarquía de Responsabilidades**:
 
-* **Máquinas de Estado Finitos (FSM):** Uso del modelo de Moore para estructurar programas complejos mediante estados lógicos claros, evitando el código "espagueti".
-* **Modularidad (API Design):** Separación de la lógica de usuario de los detalles del hardware mediante la creación de drivers propios.
-* **Temporización Asíncrona:** Uso de `HAL_GetTick()` para ejecutar tareas en paralelo sin detener el flujo del procesador.
+### 1. Modelo de Diseño en 3 Capas
+El aprendizaje central reside en la capacidad de desacoplar el firmware mediante tres niveles de abstracción:
+* **Capa de Aplicación (Lógica de Negocio):** Donde reside el `main.c` y las Máquinas de Estado. Esta capa es "ciega" al hardware; solo conoce procesos lógicos.
+* **Capa de Driver (Abstracción del Periférico):** Módulos `.c/.h` que traducen comandos lógicos en secuencias de bits. Aquí se implementan funciones reentrantes y agnósticas.
+* **Capa de Hardware Mapping (UHAL):** El diccionario del sistema. Mapea etiquetas lógicas a registros y pines físicos del MCU, permitiendo cambios de hardware sin tocar la lógica superior.
+
+### 2. Máquinas de Estado Finitos (FSM)
+Uso del **Modelo de Moore** para estructurar programas complejos. La lógica se define por estados determinísticos y transiciones claras, lo que elimina el código "espagueti" y garantiza que el sistema siempre se encuentre en un estado conocido y seguro.
+
+### 3. Temporización Asíncrona y Multitarea Cooperativa
+Sustitución definitiva de los bucles de espera por gestión de tiempos basada en `HAL_GetTick()`. 
+* **Ejecución No Bloqueante:** Permite el flujo continuo del procesador, habilitando la ejecución de tareas en paralelo (multitasking cooperativo) y mejorando drásticamente la reactividad del sistema ante eventos externos.
 
 ---
 
@@ -107,6 +114,8 @@ El desarrollo de este nivel se fundamenta en los estándares de la industria par
 ---
 
 <div align="center">
-  <h3>💎 "Aprendiendo paso a paso el control del silicio: de la lógica binaria a la arquitectura de sistemas."</h3>
-  <p><i>Hacia una base sólida en ingeniería de sistemas embebidos.</i></p>
+  <p><i>"La eficiencia en sistemas embebidos reside en elegir las estructuras de datos que permitan al hardware hablar el lenguaje de la lógica con el menor costo de CPU posible."</i></p>
+  <br>
+  <h3>💎 Aprendiendo paso a paso el control del silicio: de la lógica binaria a la arquitectura de sistemas.</h3>
+  <p><b>Hacia una base sólida en ingeniería de sistemas embebidos.</b></p>
 </div>
