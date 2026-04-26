@@ -17,7 +17,7 @@ Cada proyecto en esta carpeta se rige por un esquema de capas que separa el sili
 | Proyecto | Descripción | Conceptos Clave de Ingeniería |
 | :--- | :--- | :--- |
 | **[01.Contador_Up-Down](./01.Contador_Up_Down_7Seg)** | Contador 0-9 con detección de límites y feedback visual. | *Active-Low, Edge Detection, Multiplexación.* |
-| **[02.Semaforo_Smart](./02.Semaforo_Smart)** | Sistema de tráfico con transiciones de seguridad. | *FSM determinista, Temporización por estados.* |
+| **[02.Semaforo_Smart](./02.Semaforo_Smart)** | Sistema de tráfico con transiciones de seguridad. | *MEF determinista, Temporización por estados.* |
 | **[03.Simon_Dice](./03.Simon_Dice)** | Juego de memoria y destreza mental. | *Algoritmos de aleatoriedad, Manejo de arreglos.* |
 | **[04.Integracion_APIs](./04.Integracion_APIs)** | Secuenciador maestro de efectos visuales. | *Multitarea Cooperativa, Abstracción de Grupos.* |
 
@@ -30,7 +30,7 @@ Al completar esta fase, se han dominado las siguientes áreas críticas para el 
 ### 1. Multitarea Cooperativa (Async Logic)
 Dominio del tiempo sin bloqueos del CPU. El firmware puede procesar la UART, filtrar el ruido mecánico de un pulsador y ejecutar secuencias visuales de alta velocidad simultáneamente, garantizando una latencia mínima.
 
-### 2. Máquinas de Estados Finitos (FSM)
+### 2. Máquinas de Estados Finitos (MEF)
 Capacidad para modelar el comportamiento del sistema mediante `enum` + `switch-case`. Esto asegura un sistema determinista donde el microcontrolador siempre se encuentra en un estado conocido y seguro.
 
 ### 3. Drivers Reentrantes y Modulares
@@ -40,7 +40,7 @@ Desarrollo de librerías propias (`API_debounce`, `API_delay`) bajo un modelo de
 * **Encapsulamiento:** Aislar la complejidad de los registros y timers internos, exponiendo únicamente una interfaz de usuario limpia y documentada bajo estándar **Doxygen**.
 
 ### 4. Telemetría y Diagnóstico (UART)
-Implementación de canales de comunicación para monitorear variables internas y estados de la FSM en tiempo real, facilitando la depuración en sistemas donde el Debugger físico no es suficiente.
+Implementación de canales de comunicación para monitorear variables internas y estados de la MEF en tiempo real, facilitando la depuración en sistemas donde el Debugger físico no es suficiente.
 
 ---
 
