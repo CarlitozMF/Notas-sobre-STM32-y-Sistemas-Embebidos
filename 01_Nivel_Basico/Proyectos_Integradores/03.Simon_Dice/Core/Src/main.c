@@ -55,37 +55,88 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-// --- Funciones del Juego ---
-void Debug_Log(char* mensaje);
+
+/**
+ * @brief  Bloquea la ejecución hasta que se presiona uno de los 4 botones.
+ * @note   Implementa una espera activa con un pequeño delay para reducir el consumo de CPU.
+ * @retval uint8_t ID del botón presionado (1 a 4).
+ */
 uint8_t Simon_EsperarBoton(void);
+
+/**
+ * @brief  Verifica de forma no bloqueante si algún botón está siendo presionado.
+ * @note   Útil para detectar el inicio del juego o flancos de bajada.
+ * @retval uint8_t 1 si hay al menos un botón presionado, 0 en caso contrario.
+ */
 uint8_t Simon_CualquierBotonPresionado(void);
+
+/**
+ * @brief  Muestra la secuencia generada hasta el nivel actual utilizando los LEDs.
+ * @details Itera sobre el arreglo 'secuencia', encendiendo el LED correspondiente
+ * con tiempos de encendido (600ms) y apagado (200ms).
+ * @retval None
+ */
 void Simon_ReproducirSecuencia(void);
+
+/**
+ * @brief  Enciende un LED específico y asegura que los demás estén apagados.
+ * @param  num: ID del LED a encender (1 a 4).
+ * @retval None
+ */
 void Simon_EncenderUno(uint8_t num);
+
+/**
+ * @brief  Apaga todos los LEDs del juego de forma simultánea.
+ * @note   Utiliza operaciones de bits (OR) para manejar múltiples pines en una sola llamada HAL.
+ * @retval None
+ */
 void LED_All_Off(void);
+
+/**
+ * @brief  Ejecuta una animación de parpadeo rápido (flash) para indicar la pérdida del juego.
+ * @retval None
+ */
 void Game_Over_Anim(void);
+
+/**
+ * @brief  Ejecuta una coreografía de luces circular y un flash final al ganar.
+ * @details Envía un mensaje de felicitaciones por UART y realiza una animación de "giro"
+ * con los 4 LEDs antes de reiniciar el contador de niveles.
+ * @retval None
+ */
 void Win_Animation(void);
+
+/**
+ * @brief  Envía una cadena de caracteres a través del periférico USART3.
+ * @param  mensaje: Puntero a la cadena de texto (string) a transmitir.
+ * @retval None
+ */
+void Debug_Log(char* mensaje);
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* Lógica de Control de Hardware ---------------------------------------------*/
+
+/* --- Lógica de Control de Hardware --- */
 
 uint8_t Simon_EsperarBoton(void) {
     while (1) {
         // Asumiendo Pulsadores con Pull-Up interna (Active Low)
-        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET) return 1;	//Boton Rojo
-        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET) return 2;	//Boton Amarillo
-        if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == GPIO_PIN_RESET) return 3;	//Boton Verde
-        if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6) == GPIO_PIN_RESET) return 4;	//Boton Azul
+        if (HAL_GPIO_ReadPin(BTN_1_GPIO_Port, BTN_1_Pin) == GPIO_PIN_RESET) return 1;	//Boton 1
+        if (HAL_GPIO_ReadPin(BTN_2_GPIO_Port, BTN_2_Pin) == GPIO_PIN_RESET) return 2;	//Boton 2
+        if (HAL_GPIO_ReadPin(BTN_3_GPIO_Port, BTN_3_Pin) == GPIO_PIN_RESET) return 3;	//Boton 3
+        if (HAL_GPIO_ReadPin(BTN_4_GPIO_Port, BTN_4_Pin) == GPIO_PIN_RESET) return 4;	//Boton 4
         HAL_Delay(10); // Respiro para el CPU
     }
 }
 
 uint8_t Simon_CualquierBotonPresionado(void) {
-    if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8) == GPIO_PIN_RESET ||
-        HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_9) == GPIO_PIN_RESET ||
-        HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == GPIO_PIN_RESET ||
-        HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6) == GPIO_PIN_RESET) {
+    if (HAL_GPIO_ReadPin(BTN_1_GPIO_Port, BTN_1_Pin) == GPIO_PIN_RESET ||
+        HAL_GPIO_ReadPin(BTN_2_GPIO_Port, BTN_2_Pin) == GPIO_PIN_RESET ||
+        HAL_GPIO_ReadPin(BTN_3_GPIO_Port, BTN_3_Pin) == GPIO_PIN_RESET ||
+        HAL_GPIO_ReadPin(BTN_4_GPIO_Port, BTN_4_Pin) == GPIO_PIN_RESET) {
         return 1;
     }
     return 0;
@@ -104,22 +155,22 @@ void Simon_ReproducirSecuencia(void) {
 void Simon_EncenderUno(uint8_t num) {
     LED_All_Off();
     switch (num) {
-        case 1: HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, 1); break;	//Led Rojo
-        case 2: HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, 1); break;	//Led Amarillo
-        case 3: HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, 1); break;	//Led Verde
-        case 4: HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, 1); break;	//Led Azul
+        case 1: HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, 1); break;	//Led 1
+        case 2: HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, 1); break;	//Led 2
+        case 3: HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, 1); break;	//Led 3
+        case 4: HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, 1); break;	//Led 4
     }
 }
 
 void LED_All_Off(void) {
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14 | GPIO_PIN_15, 0);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, 0);
+    HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin | LED_2_Pin, 0);
+    HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin | LED_4_Pin, 0);
 }
 
 void Game_Over_Anim(void) {
     for(int i=0; i<6; i++) {
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14 | GPIO_PIN_15, 1);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, 1);
+        HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin | LED_2_Pin, 1);
+        HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin | LED_4_Pin, 1);
         HAL_Delay(150);
         LED_All_Off();
         HAL_Delay(150);
@@ -129,26 +180,26 @@ void Game_Over_Anim(void) {
 void Win_Animation(void) {
     Debug_Log("\r\n🏆 ¡FELICIDADES! HAS COMPLETADO EL JUEGO 🏆\r\n");
     for (int i = 0; i < 10; i++) { // Repetir el giro 10 veces
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, 1); // LED 1
+        HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, 1); // LED 1
         HAL_Delay(50);
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14, 0);
+        HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin, 0);
 
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, 1); // LED 2
+        HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, 1); // LED 2
         HAL_Delay(50);
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, 0);
+        HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, 0);
 
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, 1); // LED 3
+        HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, 1); // LED 3
         HAL_Delay(50);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, 0);
+        HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin, 0);
 
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, 1); // LED 4
+        HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, 1); // LED 4
         HAL_Delay(50);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, 0);
+        HAL_GPIO_WritePin(LED_4_GPIO_Port, LED_4_Pin, 0);
     }
     // Flash final de victoria
     for(int j=0; j<3; j++){
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11 | GPIO_PIN_10, 1);
-        HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14 | GPIO_PIN_15, 1);
+        HAL_GPIO_WritePin(LED_1_GPIO_Port, LED_1_Pin | LED_2_Pin, 1);
+        HAL_GPIO_WritePin(LED_3_GPIO_Port, LED_3_Pin | LED_4_Pin, 1);
         HAL_Delay(200);
         LED_All_Off();
         HAL_Delay(200);
@@ -210,7 +261,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  // 1. Aumentar nivel
+
+	  	  	  // 1. Aumentar nivel
 	          if (nivel_actual < MAX_NIVEL) {
 	              secuencia[nivel_actual] = (rand() % 4) + 1;
 	              nivel_actual++;
@@ -386,11 +438,11 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD1_Pin|GPIO_PIN_10|GPIO_PIN_11|LD3_Pin
+  HAL_GPIO_WritePin(GPIOB, LD1_Pin|LED_3_Pin|LED_4_Pin|LD3_Pin
                           |LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, LED_1_Pin|LED_2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
@@ -401,23 +453,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA5 PA6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
+  /*Configure GPIO pins : BTN_3_Pin BTN_4_Pin */
+  GPIO_InitStruct.Pin = BTN_3_Pin|BTN_4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD1_Pin PB10 PB11 LD3_Pin
+  /*Configure GPIO pins : LD1_Pin LED_3_Pin LED_4_Pin LD3_Pin
                            LD2_Pin */
-  GPIO_InitStruct.Pin = LD1_Pin|GPIO_PIN_10|GPIO_PIN_11|LD3_Pin
+  GPIO_InitStruct.Pin = LD1_Pin|LED_3_Pin|LED_4_Pin|LD3_Pin
                           |LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE14 PE15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : LED_1_Pin LED_2_Pin */
+  GPIO_InitStruct.Pin = LED_1_Pin|LED_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -436,8 +488,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB8 PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
+  /*Configure GPIO pins : BTN_1_Pin BTN_2_Pin */
+  GPIO_InitStruct.Pin = BTN_1_Pin|BTN_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);

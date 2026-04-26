@@ -61,8 +61,24 @@ void Error_Handler(void);
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
+#define LED_R_Pin GPIO_PIN_5
+#define LED_R_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
+#define SEG_A_Pin GPIO_PIN_7
+#define SEG_A_GPIO_Port GPIOE
+#define SEG_B_Pin GPIO_PIN_10
+#define SEG_B_GPIO_Port GPIOE
+#define SEG_C_Pin GPIO_PIN_12
+#define SEG_C_GPIO_Port GPIOE
+#define SEG_D_Pin GPIO_PIN_14
+#define SEG_D_GPIO_Port GPIOE
+#define SEG_E_Pin GPIO_PIN_15
+#define SEG_E_GPIO_Port GPIOE
+#define SEG_F_Pin GPIO_PIN_10
+#define SEG_F_GPIO_Port GPIOB
+#define SEG_G_Pin GPIO_PIN_11
+#define SEG_G_GPIO_Port GPIOB
 #define LD3_Pin GPIO_PIN_14
 #define LD3_GPIO_Port GPIOB
 #define STLK_RX_Pin GPIO_PIN_8
@@ -79,6 +95,10 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
+#define LED_V_Pin GPIO_PIN_8
+#define LED_V_GPIO_Port GPIOB
+#define LED_A_Pin GPIO_PIN_9
+#define LED_A_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

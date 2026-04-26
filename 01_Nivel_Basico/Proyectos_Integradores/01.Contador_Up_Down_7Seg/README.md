@@ -26,7 +26,7 @@ Este es el primer proyecto integrador del **Nivel Básico**. Representa la conso
 
 ---
 
-## 🧠 Teoría de Operación Completa
+## 🧠 Teoría de Operación
 
 El funcionamiento del sistema se rige por un ciclo cerrado de **Muestreo, Validación, Decodificación y Serialización**. A continuación, se detallan los pilares físicos y lógicos que permiten el control del contador.
 
@@ -161,7 +161,7 @@ El uso de variables de **estado anterior** (`btn_up_last`) permite que el bucle 
 
 ---
 
-## 🚀 Roadmap: Mejoras Futuras
+## 🚀 Roadmap: Futuras Mejoras
 
 Para evolucionar este prototipo hacia un estándar de nivel industrial y maximizar el aprovechamiento de los recursos del MCU, se plantean las siguientes líneas de mejora:
 

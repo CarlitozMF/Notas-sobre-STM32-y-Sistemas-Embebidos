@@ -25,11 +25,9 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ## 📂 Estructura del Aprendizaje
 
-### 📘 [Documentación y Guías](./Documentacion/)
+### 📘 [Documentación y Guías](./Documentacion/) -En Proceso-
 *Fundamentos técnicos y buenas prácticas antes de programar:*
-* **Guía de Supervivencia:** *Particularidades del IDE y regeneración de código.*
-* **Arquitectura HAL:** *Estructura de funciones, Handles y Timeouts.*
-* **Diccionario de Funciones:** *Sintaxis de WritePin, ReadPin y Delay.*
+
 
 ### 🏗️ [01_Nivel Básico (GPIO & Lógica de Control)](./01_Nivel_Basico/) - ✅ COMPLETADO -
 *Fundamentos de electrónica digital y programación estructurada:*

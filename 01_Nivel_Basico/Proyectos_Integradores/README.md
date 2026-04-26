@@ -10,8 +10,6 @@ Cada proyecto en esta carpeta se rige por un esquema de capas que separa el sili
 3. **MEFs Jerárquicas:** Una máquina de estados de bajo nivel (Driver) alimentando a una máquina de estados de alto nivel (Aplicación).
 4. **Escalabilidad:** Uso intensivo de punteros y estructuras para manejar hardware de forma genérica.
 
-
-
 ---
 
 ## 🛠️ Portafolio de Proyectos
@@ -35,10 +33,11 @@ Dominio del tiempo sin bloqueos del CPU. El firmware puede procesar la UART, fil
 ### 2. Máquinas de Estados Finitos (FSM)
 Capacidad para modelar el comportamiento del sistema mediante `enum` + `switch-case`. Esto asegura un sistema determinista donde el microcontrolador siempre se encuentra en un estado conocido y seguro.
 
-
-
 ### 3. Drivers Reentrantes y Modulares
-Creación de librerías propias (`API_debounce`, `API_delay`) que son independientes del hardware. Estos drivers son "cajas negras" reutilizables que permiten migrar el código a otras placas STM32 con un esfuerzo de re-mapeo mínimo.
+Desarrollo de librerías propias (`API_debounce`, `API_delay`) bajo un modelo de **objetos en C**. Estos drivers son "cajas negras" completamente reutilizables y **reentrantes**, lo que permite:
+* **Multi-instancia:** Gestionar N periféricos de forma simultánea e independiente mediante el paso de punteros a estructuras.
+* **Portabilidad:** Migrar la lógica de control a otras placas de la familia STM32 (o incluso otras arquitecturas) con un esfuerzo de re-mapeo mínimo en la capa de hardware.
+* **Encapsulamiento:** Aislar la complejidad de los registros y timers internos, exponiendo únicamente una interfaz de usuario limpia y documentada bajo estándar **Doxygen**.
 
 ### 4. Telemetría y Diagnóstico (UART)
 Implementación de canales de comunicación para monitorear variables internas y estados de la FSM en tiempo real, facilitando la depuración en sistemas donde el Debugger físico no es suficiente.
@@ -54,3 +53,6 @@ Implementación de canales de comunicación para monitorear variables internas y
 
 # **🏁 NIVEL BÁSICO COMPLETADO.** 
 **Los cimientos están listos. El sistema ya es capaz de gestionar lógica compleja de forma asíncrona mediante Polling.**
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

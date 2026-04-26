@@ -30,23 +30,23 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-// Representa un pin físico individual
+/* --- Estructura para definir puertos y pines a usar --- */
 typedef struct {
     GPIO_TypeDef* port;  // GPIOA, GPIOB, etc.
     uint16_t pin;       // GPIO_PIN_0, etc.
 } GPIO_Config_t;
 
-// Representa el display de catado comun
+/* --- Estructura para definir un display de 7 segmentos--- */
 typedef struct {
     GPIO_Config_t* leds; // Puntero a un arreglo de configuraciones
-    uint8_t count;       // Cantidad de LEDs
 } LedBar_t;
 
+/* --- ENUM con los estados del semaforo para controlar por MEF--- */
 typedef enum {
+	ESTADO_ROJO,
+	ESTADO_PREVERDE,
 	ESTADO_VERDE,
 	ESTADO_AMARILLO,
-	ESTADO_PRE_ROJO,
-	ESTADO_ROJO,
 } Semaforo_State_t;
 /* USER CODE END PTD */
 
@@ -80,23 +80,28 @@ const uint8_t segmento_map[] = {
     0x6F  // 9: 0110 1111
 };
 
+// --- Calcula automaticamente la cantidad de datos en el mapa de bits del display ---
 #define MAX_DIGITOS (sizeof(segmento_map) / sizeof(segmento_map[0]))
 
-// Mapeo físico: Conecta los segmentos A-G a los pines que prefieras
+// --- Mapeo físico: Conecta los segmentos A-G a los pines definidos en el .ioc ---
 GPIO_Config_t pines_display[] = {
-    {GPIOE, GPIO_PIN_7}, // Segmento A
-    {GPIOE, GPIO_PIN_10}, // Segmento B
-    {GPIOE, GPIO_PIN_12}, // Segmento C
-    {GPIOE, GPIO_PIN_14}, // Segmento D
-    {GPIOE, GPIO_PIN_15}, // Segmento E
-    {GPIOB, GPIO_PIN_10}, // Segmento F
-    {GPIOB, GPIO_PIN_11}  // Segmento G
+    {SEG_A_GPIO_Port, SEG_A_Pin}, // Segmento A
+    {SEG_B_GPIO_Port, SEG_B_Pin}, // Segmento B
+    {SEG_C_GPIO_Port, SEG_C_Pin}, // Segmento C
+    {SEG_D_GPIO_Port, SEG_D_Pin}, // Segmento D
+    {SEG_E_GPIO_Port, SEG_E_Pin}, // Segmento E
+    {SEG_F_GPIO_Port, SEG_F_Pin}, // Segmento F
+    {SEG_G_GPIO_Port, SEG_G_Pin}  // Segmento G
 };
+
+// --- Calcula automaticamente la cantidad de segmentos del display ---
 #define SEGMENT_COUNT (sizeof(pines_display) / sizeof(pines_display[0]))
 
+// --- Se crea una Instancia para el Display a partir de la estructura LedBar_t---
 LedBar_t miDisplay = {pines_display, SEGMENT_COUNT};
 
-Semaforo_State_t estadoActual = ESTADO_VERDE;
+// --- Se crea una Instancia de estado inicial para la MEF a partir del enum Semaforo_state_t ---
+Semaforo_State_t estadoActual = ESTADO_ROJO;
 
 /* USER CODE END PV */
 
@@ -106,9 +111,12 @@ static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
-/* Prototipos */
+/* Prototipos De Funciones a utilizar*/
+
+/* --- Funcion para trabajar por UART --- */
 void Debug_Log(const char *msg);
-/* Función de escritura de dígito */
+
+/* Función para escribir un digito en el display */
 void Display_Write(uint8_t numero);
 
 /* USER CODE END PFP */
@@ -116,22 +124,25 @@ void Display_Write(uint8_t numero);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* Función de escritura de dígito */
+/* --- Definicion de la funcion para escribir un digito en el Display CATODO COMUN --- */
 void Display_Write(uint8_t numero) {
     if (numero >= MAX_DIGITOS) return; // Protección
 
     uint8_t patron = segmento_map[numero];
 
-    for (int i = 0; i < miDisplay.count; i++) {
+    for (int i = 0; i < SEGMENT_COUNT; i++) {
         // Extraemos el bit 'i' usando desplazamiento y máscara
         uint8_t estado = (patron >> i) & 0x01;
         HAL_GPIO_WritePin(miDisplay.leds[i].port, miDisplay.leds[i].pin, estado);
     }
 }
 
+
+/* --- Definicion de la funcion para trabajar por UART --- */
 void Debug_Log(const char *msg) {
 	HAL_UART_Transmit(&huart3, (uint8_t*)msg, strlen(msg), 100);
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -176,40 +187,13 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-		// 1. MÁQUINA DE ESTADOS
-		switch (estadoActual)
-		{
-		case ESTADO_VERDE:
-			Debug_Log("ESTADO: Verde (Flujo vehicular)\r\n");
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);   // V: ON
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET); // A: OFF
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // R: OFF
-
-			HAL_Delay(5000); // Tiempo normal de verde
-			estadoActual = ESTADO_AMARILLO;
-			break;
-
-
-		case ESTADO_AMARILLO:
-			Debug_Log("ESTADO: Amarillo (Precaucion)\r\n");
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-			HAL_Delay(2000);
-			estadoActual = ESTADO_PRE_ROJO;
-			break;
-
-		case ESTADO_PRE_ROJO:
-			Debug_Log("ESTADO: Pre-Rojo (Transicion critico)\r\n");
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-			HAL_Delay(1000);
-			estadoActual = ESTADO_ROJO;
-			break;
-
+					/* --- Maquina de Estado --- */
+	switch (estadoActual){
 		case ESTADO_ROJO:
-			Debug_Log("ESTADO: Rojo (Cruce peatonal habilitado)\r\n");
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+			Debug_Log("ESTADO: ROJO (Cruce peatonal habilitado)\r\n");
+			HAL_GPIO_WritePin(LED_V_GPIO_Port, LED_V_Pin, GPIO_PIN_RESET);   // V: OFF
+			HAL_GPIO_WritePin(LED_A_GPIO_Port, LED_A_Pin, GPIO_PIN_RESET); // A: OFF
+			HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // R: ON
 
 			// --- CUENTA REGRESIVA EN EL DISPLAY ---
 			for (int i = 5; i >= 0; i--) {
@@ -222,13 +206,39 @@ int main(void)
 			}
 
 			// Al terminar la cuenta, apagamos el display para indicar fin de cruce
-			// (Opcional: puedes dejarlo en 0 o apagarlo totalmente)
 			for (int j = 0; j < miDisplay.count; j++) {
 				HAL_GPIO_WritePin(miDisplay.leds[j].port, miDisplay.leds[j].pin, GPIO_PIN_RESET);
 			}
+			estadoActual = ESTADO_PREVERDE;
+			break;
 
-			Debug_Log("LOGICA: Ciclo terminado. Reiniciando a Verde...\r\n");
+
+		case ESTADO_PREVERDE:
+			Debug_Log("ESTADO: Pre Verde (Preparese)\r\n");					// TENGO ROJO ENCENDIDO
+			HAL_GPIO_WritePin(LED_V_GPIO_Port, LED_V_Pin, GPIO_PIN_RESET);		// V: OFF
+			HAL_GPIO_WritePin(LED_A_GPIO_Port, LED_A_Pin, GPIO_PIN_SET);		// A: ON
+			HAL_Delay(2000);
 			estadoActual = ESTADO_VERDE;
+			break;
+
+		case ESTADO_VERDE:
+			Debug_Log("ESTADO: VERDE (RUN)\r\n");
+			HAL_GPIO_WritePin(LED_V_GPIO_Port, LED_V_Pin, GPIO_PIN_SET);		// V: ON
+			HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);		// R: OFF
+			HAL_GPIO_WritePin(LED_A_GPIO_Port, LED_A_Pin, GPIO_PIN_RESET);		// A: OFF
+			HAL_Delay(8000);
+			estadoActual = ESTADO_AMARILLO;
+			break;
+
+		case ESTADO_AMARILLO:
+			Debug_Log("ESTADO: AMARILLO (Precaucion)\r\n");						//TENGO VERDE ENCENDIDO DEBO APAGARLO
+			HAL_GPIO_WritePin(LED_V_GPIO_Port, LED_V_Pin, GPIO_PIN_RESET);		//A
+			HAL_GPIO_WritePin(LED_A_GPIO_Port, LED_A_Pin, GPIO_PIN_SET);		//A: ON
+			HAL_Delay(3000); // Tiempo normal de verde
+
+
+			Debug_Log("LOGICA: Ciclo terminado. Reiniciando a ROJO...\r\n");
+			estadoActual = ESTADO_ROJO;
 			break;
 		}
 	}
@@ -337,21 +347,20 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LD1_Pin|GPIO_PIN_10|GPIO_PIN_11|LD3_Pin
-                          |LD2_Pin|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LD1_Pin|SEG_F_Pin|SEG_G_Pin|LD3_Pin
+                          |LD2_Pin|LED_V_Pin|LED_A_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_14
-                          |GPIO_PIN_15, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, SEG_A_Pin|SEG_B_Pin|SEG_C_Pin|SEG_D_Pin
+                          |SEG_E_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
@@ -362,32 +371,26 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  /*Configure GPIO pin : LED_R_Pin */
+  GPIO_InitStruct.Pin = LED_R_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_R_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD1_Pin PB10 PB11 LD3_Pin
-                           LD2_Pin PB8 PB9 */
-  GPIO_InitStruct.Pin = LD1_Pin|GPIO_PIN_10|GPIO_PIN_11|LD3_Pin
-                          |LD2_Pin|GPIO_PIN_8|GPIO_PIN_9;
+  /*Configure GPIO pins : LD1_Pin SEG_F_Pin SEG_G_Pin LD3_Pin
+                           LD2_Pin LED_V_Pin LED_A_Pin */
+  GPIO_InitStruct.Pin = LD1_Pin|SEG_F_Pin|SEG_G_Pin|LD3_Pin
+                          |LD2_Pin|LED_V_Pin|LED_A_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PF12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PE7 PE10 PE12 PE14
-                           PE15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_14
-                          |GPIO_PIN_15;
+  /*Configure GPIO pins : SEG_A_Pin SEG_B_Pin SEG_C_Pin SEG_D_Pin
+                           SEG_E_Pin */
+  GPIO_InitStruct.Pin = SEG_A_Pin|SEG_B_Pin|SEG_C_Pin|SEG_D_Pin
+                          |SEG_E_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

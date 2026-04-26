@@ -1,9 +1,6 @@
 /**
  * @file API_delay.h
- * @author CarlitozMF
  * @brief API para la gestión de retardos no bloqueantes en STM32.
- * @version 2.0
- * @date 2026-01-21
  * * @details Este driver utiliza el SysTick para proporcionar una base de tiempo
  * milimétrica que permite ejecutar tareas de forma asíncrona mediante una
  * máquina de estados interna.
@@ -75,8 +72,6 @@ void delayWrite(delay_t * delay, tick_t duration);
  * @return void
  */
 void delayReset(delay_t * delay);
-
-
 
 #endif /* CUSTOM_DRIVERS_INC_API_DELAY_H_ */
 

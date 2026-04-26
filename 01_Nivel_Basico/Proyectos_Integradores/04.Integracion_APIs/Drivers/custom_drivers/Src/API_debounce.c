@@ -1,87 +1,123 @@
 /**
  * @file API_debounce.c
- * @author CarlitozMF (UTN FRT)
- * @brief Implementación de la lógica de filtrado para botones mecánicos.
+ * @author CarlitozMF
+ * @brief Implementación de la lógica reentrante de antirrebote para múltiples botones.
+ * @version 2.0
  */
 
 #include "API_debounce.h"
+#include <stddef.h>
 
-/**
- * @brief Estados internos de la FSM de antirrebote.
+/* Definiciones privadas -----------------------------------------------------*/
+
+/** * @brief Tiempo de guarda en milisegundos para filtrar los rebotes mecánicos.
+ * @note 40ms es un estándar robusto para la mayoría de pulsadores táctiles.
  */
-typedef enum {
-    BUTTON_UP,      /**< Botón en reposo (suelto) */
-    BUTTON_FALLING, /**< Detectado posible flanco de bajada */
-    BUTTON_DOWN,    /**< Botón presionado (estado estable) */
-    BUTTON_RISING   /**< Detectado posible flanco de subida */
-} debounceState_t;
+#define DEBOUNCE_TIME_MS 40
 
-/* Variables privadas */
-static delay_t debounce_timer;      /**< Timer de validación asíncrono */
-static debounceState_t estado_actual; /**< Estado actual de la FSM */
+/* Funciones privadas --------------------------------------------------------*/
 
 /**
- * @brief Lee el estado físico del pin y lo adapta a la lógica configurada.
- * @param btn Puntero a la estructura del botón.
- * @return true si el botón se considera presionado, false en caso contrario.
+ * @brief Lee el nivel físico del pin y adapta el resultado a la lógica configurada.
+ * @param btn Puntero al objeto botón que contiene la config de puerto/pin e inversión.
+ * @return true si el botón está activo según su configuración (Active High/Low).
+ * @return false si el botón está en reposo.
  */
 static bool readButton_Physical(button_t* btn) {
-    bool pin_state = HAL_GPIO_ReadPin(btn->port, btn->pin) == GPIO_PIN_SET;
+    bool pin_state = (HAL_GPIO_ReadPin(btn->port, btn->pin) == GPIO_PIN_SET);
+
+    /* Si inverted es true, el botón está activo cuando el pin está en RESET (Lógica Negativa) */
     return btn->inverted ? !pin_state : pin_state;
 }
 
-void debounceFSM_Init() {
-    delayInit(&debounce_timer, 40); // 40ms de tiempo de validación estándar
-    estado_actual = BUTTON_UP;
+/* Funciones públicas --------------------------------------------------------*/
+
+/**
+ * @brief Inicializa la estructura del botón.
+ * @details Setea el tiempo del timer interno y coloca la MEF en el estado inicial BUTTON_UP.
+ * @param btn Puntero a la estructura button_t.
+ */
+void debounceFSM_Init(button_t* btn) {
+    if (btn != NULL) {
+        delayInit(&(btn->timer), DEBOUNCE_TIME_MS);
+        btn->state = BUTTON_UP;
+        btn->keyPressed = false;
+    }
 }
 
+/**
+ * @brief Motor de la Máquina de Estados Finitos para el antirrebote.
+ * @details Esta función implementa el filtrado temporal en ambos flancos (subida y bajada).
+ * Las transiciones solo se confirman si la señal permanece estable durante DEBOUNCE_TIME_MS.
+ * @param btn Puntero a la instancia del botón a actualizar.
+ */
 void debounceFSM_Update(button_t* btn) {
-    switch (estado_actual) {
+    if (btn == NULL) return;
+
+    switch (btn->state) {
+
+        /* Estado: Reposo. Esperando detección de presión. */
         case BUTTON_UP:
             if (readButton_Physical(btn)) {
-                delayReset(&debounce_timer);
-                estado_actual = BUTTON_FALLING;
+                delayReset(&(btn->timer)); // Iniciamos conteo de validación
+                btn->state = BUTTON_FALLING;
             }
             break;
 
+        /* Estado: Transitorio de presión. Verificando estabilidad del flanco. */
         case BUTTON_FALLING:
-            if (delayRead(&debounce_timer)) {
+            if (delayRead(&(btn->timer))) {
                 if (readButton_Physical(btn)) {
-                    btn->keyPressed = true; // Evento confirmado
-                    estado_actual = BUTTON_DOWN;
+                    /* Flanco de bajada confirmado */
+                    btn->keyPressed = true;
+                    btn->state = BUTTON_DOWN;
                 } else {
-                    estado_actual = BUTTON_UP;
+                    /* Fue ruido: volver a reposo */
+                    btn->state = BUTTON_UP;
                 }
             }
             break;
 
+        /* Estado: Presión estable. Esperando detección de liberación. */
         case BUTTON_DOWN:
             if (!readButton_Physical(btn)) {
-                delayReset(&debounce_timer);
-                estado_actual = BUTTON_RISING;
+                delayReset(&(btn->timer)); // Iniciamos conteo de validación de subida
+                btn->state = BUTTON_RISING;
             }
             break;
 
+        /* Estado: Transitorio de liberación. Verificando estabilidad. */
         case BUTTON_RISING:
-            if (delayRead(&debounce_timer)) {
+            if (delayRead(&(btn->timer))) {
                 if (!readButton_Physical(btn)) {
-                    estado_actual = BUTTON_UP;
+                    /* Flanco de subida confirmado: vuelta al reposo */
+                    btn->state = BUTTON_UP;
                 } else {
-                    estado_actual = BUTTON_DOWN;
+                    /* Fue ruido: el botón sigue presionado */
+                    btn->state = BUTTON_DOWN;
                 }
             }
             break;
 
+        /* Protección ante estados no definidos */
         default:
-            estado_actual = BUTTON_UP;
+            btn->state = BUTTON_UP;
             break;
     }
 }
 
+/**
+ * @brief Interfaz de lectura de eventos para la aplicación.
+ * @details Permite conocer si hubo una pulsación confirmada.
+ * @param btn Puntero a la instancia del botón.
+ * @return true si hubo un evento, false en caso contrario.
+ * @note Limpia el flag keyPressed automáticamente (Clear on Read).
+ */
 bool readKey(button_t* btn) {
-    bool status = btn->keyPressed;
-    if (status) {
-        btn->keyPressed = false; // Reset automático tras lectura
+    bool event = false;
+    if (btn != NULL) {
+        event = btn->keyPressed;
+        btn->keyPressed = false;
     }
-    return status;
+    return event;
 }
