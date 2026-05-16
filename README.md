@@ -7,7 +7,7 @@
   [![STM32](https://img.shields.io/badge/Microcontroller-STM32F4-blue.svg)](https://www.st.com/en/microcontrollers-microprocessors/stm32f4-series.html)
   [![Language](https://img.shields.io/badge/Language-C-00599C.svg)](https://en.cppreference.com/w/c)
 
-  *Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladores **STM32** y el desarrollo de sistemas embebidos de alto rendimiento.*
+
 </div>
 
 ---
@@ -25,8 +25,11 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ## 📂 Estructura del Aprendizaje
 
-### 📘 [Documentación y Guías](./Documentacion/) -En Proceso-
-*Fundamentos técnicos y buenas prácticas antes de programar:*
+### 📘 [Documentación y Guías](./Documentacion/) - 🚀 EN CURSO -
+*Bitácora teórica de ingeniería y análisis de hardware previa al desarrollo de firmware:*
+* **Fundamentos del Silicio:** Análisis de la arquitectura Cortex-M4 del **STM32F439ZI**, mapa de memoria y árbol de relojes a **180 MHz**.
+* **Entorno e Infraestructura:** Configuración profesional del **STM32CubeIDE**, inicialización estructurada de proyectos y anatomía de los bloques `USER CODE` en el `main.c`.
+* **Capa 1 (Hardware Mapping):** Modularización semántica del hardware utilizando el archivo `main.h` y las *User Labels* como muro de contención ante cambios eléctricos.
 
 
 ### 🏗️ [01_Nivel Básico (GPIO & Lógica de Control)](./01_Nivel_Basico/) - ✅ COMPLETADO -
@@ -67,21 +70,16 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 
 ---
 
-<div align="center">
-  <h3>💎 Filosofía del Repositorio</h3>
-  <p>
-    <i>
-      "Desde el control manual del bit hasta la orquestación autónoma del silicio. 
-      Este espacio documenta la transición del programador secuencial al arquitecto de sistemas reactivos, 
-      donde cada microsegundo cuenta y el determinismo es la regla de oro."
-    </i>
-  </p>
-  
-  <p>
-    <b>Precisión • Eficiencia • Autonomía</b>
-  </p>
-  
-  <p>
-    🚀 <b>Notas-sobre-STM32-y-Sistemas-Embebidos creadas durante mi proceso de estudio</b> | <b>Carlos - UTN FRT 2026</b>
-  </p>
-</div>
+## 💎 Filosofía del Repositorio
+
+> "Diseñar sistemas embebidos no es solo hacer parpadear un LED; es estructurar el software para que el hardware sea un aliado modular, no una limitación. Este espacio documenta la evolución hacia un código predecible, eficiente y escalable, donde la abstracción es la herramienta clave para dominar la complejidad del silicio."
+
+* **Precisión • Eficiencia • Autonomía**
+
+---
+
+### 🚀 Notas sobre STM32 y Sistemas Embebidos
+  *Este repositorio es mi bitácora personal de aprendizaje sobre microcontroladores **STM32** y el desarrollo de sistemas embebidos de alto rendimiento.*
+
+  🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+  🚀 Apasionado Autodidacta por los Sistemas Embebidos.

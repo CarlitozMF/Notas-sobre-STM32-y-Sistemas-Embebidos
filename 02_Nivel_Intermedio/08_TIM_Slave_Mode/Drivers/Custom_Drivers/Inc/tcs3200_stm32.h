@@ -13,7 +13,7 @@
 #ifndef INC_TCS3200_STM32_H_
 #define INC_TCS3200_STM32_H_
 
-#include "main.h"
+#include "stm32f4xx_hal.h"
 
 /**
  * @defgroup TCS3200_Config Constantes de Configuración

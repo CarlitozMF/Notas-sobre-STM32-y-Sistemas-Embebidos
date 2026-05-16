@@ -336,20 +336,22 @@ El diseño se basa en una jerarquía de capas donde los **Drivers de Usuario** s
 
 ```mermaid
 graph TD
-    subgraph Capa 3: Aplicacion - main.c "Super-Loop"
+    subgraph Capa3 ["Capa 3: Aplicación - main.c (Super-Loop)"]
         A[FSM Escenas: Secuenciador] -->|Polling| C[delayRead: API_delay]
         B[Gestor de Eventos: Boton 0 y 1] -->|Polling| D[readKey: API_debounce]
         A -.->|Simultaneidad| B
     end
 
-    subgraph Capa 2: APIs / Drivers Propios "Objetos"
+    subgraph Capa2 ["Capa 2: APIs / Drivers Propios (Objetos)"]
         D -->|Filtro Individual| E[Estructuras button_t]
         C -->|Timers Independientes| F[Estructuras delay_t]
-        G[API_led.h] -->|Abstraccion| H[LED_t Objects]
+        G[API_led.h] -->|Abstracción| H[LED_t Objects]
     end
 
-    subgraph Capa 1: Hardware Abstraction Layer
-        E & F & G -->|Driver Calls| I[STM32 HAL / CMSIS]
+    subgraph Capa1 ["Capa 1: Hardware Abstraction Layer"]
+        E --> I[STM32 HAL / CMSIS]
+        F --> I
+        G --> I
     end
 
     I --> J[Hardware: LEDs y Pulsadores]

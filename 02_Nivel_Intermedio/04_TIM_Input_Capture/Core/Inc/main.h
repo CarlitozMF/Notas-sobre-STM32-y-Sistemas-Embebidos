@@ -73,10 +73,12 @@ void Error_Handler(void);
 #define SEG_F_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
+#define HCSR04_ECHO_Pin GPIO_PIN_6
+#define HCSR04_ECHO_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
-#define usr_ledAzul_Pin GPIO_PIN_13
-#define usr_ledAzul_GPIO_Port GPIOF
+#define LED_FDBK_Pin GPIO_PIN_13
+#define LED_FDBK_GPIO_Port GPIOF
 #define SEG_G_Pin GPIO_PIN_1
 #define SEG_G_GPIO_Port GPIOG
 #define HCSR04_TRIG_Pin GPIO_PIN_11
@@ -107,6 +109,8 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 #define EN3_Pin GPIO_PIN_10
 #define EN3_GPIO_Port GPIOC
+#define EN4_Pin GPIO_PIN_11
+#define EN4_GPIO_Port GPIOC
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
 

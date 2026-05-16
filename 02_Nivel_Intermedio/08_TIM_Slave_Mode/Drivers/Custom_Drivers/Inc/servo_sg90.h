@@ -9,7 +9,7 @@
 #ifndef SERVO_SG90_H
 #define SERVO_SG90_H
 
-#include "main.h"
+#include "main.h" //Con esta linea me idependizo del micro stm32?
 
 /**
  * @brief Estructura de control para una instancia de Servo.

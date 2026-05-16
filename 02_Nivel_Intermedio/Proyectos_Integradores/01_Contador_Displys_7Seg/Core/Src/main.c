@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -22,7 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main.h"
-#include "Display_7Seg_stm32.h"
+#include "Display_7Seg.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
@@ -48,19 +48,21 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
+
 /* --- Definiciones y Tipos --- */
+
 typedef struct {
-    uint32_t period;
-    uint32_t lastTick;
-    void (*taskFunction)(void);
+    uint32_t period;           // Tiempo de espera entre ejecuciones (en milisegundos).
+    uint32_t lastTick;         // Almacena el tiempo (HAL_GetTick) de la última ejecución exitosa.
+    void (*taskFunction)(void); // Puntero a función: aquí guardas el nombre de la función que quieres ejecutar.
 } task_t;
 
 /* --- Variables Globales y Handles --- */
 
-display_7seg_t hDisp;
-uint8_t bufferDisplay[3]; //buffer para la cantidad de displays
-volatile int32_t contadorPersonas = 0;
-char msgUART[50];
+display_7seg_t hDisp;           // Estructura de control (Handle) de tu driver agnóstico de 7 segmentos.
+uint8_t bufferDisplay[4];      // Memoria RAM dedicada para guardar los patrones de bits de los 4 displays.
+volatile int32_t contadorPersonas = 0; // Variable que cuenta ingresos/egresos.
+char msgUART[50];                     // Buffer de texto (string) para formatear los mensajes que envías por consola.
 
 /* USER CODE END PV */
 
@@ -79,11 +81,12 @@ void Tarea_DisplayUpdate(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 /* --- Tabla del Planificador --- */
 task_t tasks[] = {
-    { 1000, 0, Tarea_Heartbeat   }, // Tarea 1: Cada 1s
-    { 5000, 0, Tarea_ReporteUART }, // Tarea 2: Cada 5s
-    { 100,  0, Tarea_DisplayUpdate} // Tarea 3: Refresco de datos cada 100ms
+    { 100, 0, Tarea_Heartbeat   }, // Tarea 1: Ejecuta cada 100ms
+    { 5000, 0, Tarea_ReporteUART }, // Tarea 2: Ejecuta cada 5000ms (5s)
+    { 100,  0, Tarea_DisplayUpdate} // Tarea 3: Actualiza lógica de pantalla cada 100ms
 };
 const uint8_t CANT_TAREAS = sizeof(tasks) / sizeof(task_t);
 
@@ -91,19 +94,34 @@ const uint8_t CANT_TAREAS = sizeof(tasks) / sizeof(task_t);
 /* --- Implementación de Tareas --- */
 
 void Tarea_Heartbeat(void) {
-    HAL_GPIO_TogglePin(usr_ledAzul_GPIO_Port, usr_ledAzul_Pin);
+	HAL_GPIO_TogglePin(usr_ledAzul_GPIO_Port, usr_ledAzul_Pin);
 }
 
 void Tarea_ReporteUART(void) {
-    sprintf(msgUART, "TELEMETRIA: Personas en sala: %ld\r\n", contadorPersonas);
-    HAL_UART_Transmit(&huart3, (uint8_t*)msgUART, strlen(msgUART), 100);
+	sprintf(msgUART, "TELEMETRIA: Personas en sala: %ld\r\n", contadorPersonas);
+	HAL_UART_Transmit(&huart3, (uint8_t*)msgUART, strlen(msgUART), 100);
 }
 
 void Tarea_DisplayUpdate(void) {
-    // Si el valor cambió, el driver actualiza el buffer
-    Display7Seg_WriteNumber(&hDisp, (uint32_t)contadorPersonas);
+	// Si el valor cambió, el driver actualiza el buffer
+	Display7Seg_WriteNumber(&hDisp, (uint32_t)contadorPersonas);
 }
 
+/**
+ * @brief Función de puente para escribir en pines GPIO usando HAL.
+ * @note Esta es la implementación específica para STM32.
+ */
+void STM32_WritePin(display_gpio_t pin, bool state) {
+	HAL_GPIO_WritePin((GPIO_TypeDef*)pin.port, pin.pin,
+			state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+/**
+ * @brief Función de puente para obtener el tiempo del sistema.
+ */
+uint32_t STM32_GetTick(void) {
+	return HAL_GetTick();
+}
 
 /* USER CODE END 0 */
 
@@ -140,42 +158,55 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  /* Configuración de Pines del Display (Usando Labels del .ioc) */
-      display_pio_t segmentos[] = {
-          {SEG_A_GPIO_Port, SEG_A_Pin}, {SEG_B_GPIO_Port, SEG_B_Pin},
-          {SEG_C_GPIO_Port, SEG_C_Pin}, {SEG_D_GPIO_Port, SEG_D_Pin},
-          {SEG_E_GPIO_Port, SEG_E_Pin}, {SEG_F_GPIO_Port, SEG_F_Pin},
-          {SEG_G_GPIO_Port, SEG_G_Pin}
-      };
-      display_pio_t comunes[] = {
-          {EN1_GPIO_Port, EN1_Pin},
-          {EN2_GPIO_Port, EN2_Pin},
-          {EN3_GPIO_Port, EN3_Pin}
-      };
+	/* 1. Mapeo de Hardware (Capa 1) */
+	display_gpio_t segmentos[] = {
+			{(void*)SEG_A_GPIO_Port, SEG_A_Pin}, {(void*)SEG_B_GPIO_Port, SEG_B_Pin},
+			{(void*)SEG_C_GPIO_Port, SEG_C_Pin}, {(void*)SEG_D_GPIO_Port, SEG_D_Pin},
+			{(void*)SEG_E_GPIO_Port, SEG_E_Pin}, {(void*)SEG_F_GPIO_Port, SEG_F_Pin},
+			{(void*)SEG_G_GPIO_Port, SEG_G_Pin}
+	};
 
-      /* Iniciar Driver */
-      Display7Seg_Init(&hDisp, &htim2, segmentos, comunes, 3, bufferDisplay);
-      Display7Seg_WriteString(&hDisp, "HI ");
-      HAL_Delay(1000);
+	display_gpio_t comunes[] = {
+			{(void*)EN1_GPIO_Port, EN1_Pin},
+			{(void*)EN2_GPIO_Port, EN2_Pin},
+			{(void*)EN3_GPIO_Port, EN3_Pin},
+			{(void*)EN4_GPIO_Port, EN4_Pin}
+	};
+
+	/* 2. Definición de la PAL */
+	display_7seg_pal_t stm32_pal = {
+			.write_pin = STM32_WritePin,
+			.get_tick  = STM32_GetTick,
+			.read_pin  = NULL // No lo usamos en este driver
+	};
+
+	/* 3. Inicialización del Driver (Capa 2) */
+	Display7Seg_Init(&hDisp, stm32_pal, segmentos, comunes, 4, bufferDisplay, DISPLAY_CATHODE);
+
+	/* 4. Arranque de Periféricos de bajo nivel */
+	HAL_TIM_Base_Start_IT(&htim2);
+
+	Display7Seg_WriteString(&hDisp, "HOLA");
+	HAL_Delay(1000);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1)
+	{
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint32_t currentTick = HAL_GetTick();
+		uint32_t currentTick = HAL_GetTick();
 
-	          for (uint8_t i = 0; i < CANT_TAREAS; i++) {
-	              if (currentTick - tasks[i].lastTick >= tasks[i].period) {
-	                  tasks[i].lastTick = currentTick;
-	                  tasks[i].taskFunction(); // Ejecutar la tarea
-	              }
-	          }
-  }
+		for (uint8_t i = 0; i < CANT_TAREAS; i++) {
+			if (currentTick - tasks[i].lastTick >= tasks[i].period) {
+				tasks[i].lastTick = currentTick;
+				tasks[i].taskFunction(); // Ejecutar la tarea
+			}
+		}
+	}
   /* USER CODE END 3 */
 }
 
@@ -252,7 +283,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 8999;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 54;
+  htim2.Init.Period = 41;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -347,7 +378,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin|EN4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : USER_Btn_Pin */
   GPIO_InitStruct.Pin = USER_Btn_Pin;
@@ -380,7 +411,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : Sensor1_Pin Sensor2_Pin */
   GPIO_InitStruct.Pin = Sensor1_Pin|Sensor2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -404,8 +435,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EN1_Pin EN2_Pin EN3_Pin */
-  GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|EN3_Pin;
+  /*Configure GPIO pins : EN1_Pin EN2_Pin EN3_Pin EN4_Pin */
+  GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|EN3_Pin|EN4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -427,33 +458,33 @@ static void MX_GPIO_Init(void)
  * @note Detección por flanco de bajada (Falling Edge).
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    static uint32_t lastITTick1 = 0;
-    static uint32_t lastITTick2 = 0;
-    uint32_t currentTick = HAL_GetTick();
+	static uint32_t lastITTick1 = 0;
+	static uint32_t lastITTick2 = 0;
+	uint32_t currentTick = HAL_GetTick();
 
-    if (GPIO_Pin == Sensor1_Pin) {
-        // Aumentamos el intervalo para ignorar rebotes largos
-        if (currentTick - lastITTick1 > 600) {
-            contadorPersonas++;
-            lastITTick1 = currentTick;
-        }
-    }
+	if (GPIO_Pin == Sensor1_Pin) {
+		// Aumentamos el intervalo para ignorar rebotes largos
+		if (currentTick - lastITTick1 > 600) {
+			contadorPersonas++;
+			lastITTick1 = currentTick;
+		}
+	}
 
-    if (GPIO_Pin == Sensor2_Pin) {
-        if (currentTick - lastITTick2 > 600) {
-            if (contadorPersonas > 0) contadorPersonas--;
-            lastITTick2 = currentTick;
-        }
-    }
+	if (GPIO_Pin == Sensor2_Pin) {
+		if (currentTick - lastITTick2 > 600) {
+			if (contadorPersonas > 0) contadorPersonas--;
+			lastITTick2 = currentTick;
+		}
+	}
 }
 
 /**
  * @brief Callback del Timer para la multiplexación del Display.
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-    if (htim->Instance == TIM2) {
-        Display7Seg_Refresh_ISR(&hDisp);
-    }
+	if (htim->Instance == TIM2) {
+		Display7Seg_Refresh_ISR(&hDisp);
+	}
 }
 
 /* USER CODE END 4 */
@@ -465,11 +496,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1)
+	{
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
@@ -483,7 +514,7 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
+	/* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }

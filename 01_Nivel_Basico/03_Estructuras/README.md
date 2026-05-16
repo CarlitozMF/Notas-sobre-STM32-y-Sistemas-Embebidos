@@ -49,8 +49,8 @@ Una vez definidas las estructuras, con *Estructura 1* preparamos en un array sin
       {GPIOB, GPIO_PIN_14}
    };
 
-   // 2. Inicializamos la estructura usando la constante calculada
-   Leds_t barra_leds = {configuracion_leds, LED_COUNT};
+   // 2. Inicializamos la estructura mediante una instancia
+   Leds_t barra_leds = {configuracion_leds};
 
    // 3. Usamos sizeof para calcular la cantidad de elementos automáticamente
    // Fórmula: Tamaño total del arreglo / Tamaño de un solo elemento
@@ -82,8 +82,7 @@ Si declaramos un `uint8_t` seguido de un `uint32_t`, el microcontrolador no pued
 
 ## 🚀 Técnica de Optimización: "De Mayor a Menor"
 
-Para minimizar el desperdicio, la regla de oro en sistemas embebidos es declarar los miembros de la estructura en **orden descendente de tamaño**. Esto permite que el compilador agrupe las variables pequeñas en los huecos que dejan las grandes.🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
-🚀 Apasionado Autodidacta por los Sistemas Embebidos.
+Para minimizar el desperdicio, la regla de oro en sistemas embebidos es declarar los miembros de la estructura en **orden descendente de tamaño**. Esto permite que el compilador agrupe las variables pequeñas en los huecos que dejan las grandes.
 
 ### Comparación de impacto en RAM:
 

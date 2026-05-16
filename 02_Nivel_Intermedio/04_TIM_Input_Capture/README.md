@@ -3,10 +3,26 @@
 Este proyecto documenta la implementación del periférico de **Input Capture (IC)** para la medición precisa de intervalos temporales. Se utiliza un sensor ultrasónico **HC-SR04** para validar la arquitectura, integrando una base de tiempos determinística mediante **DWT** y una interfaz visual multiplexada por interrupción, todo bajo la plataforma **Nucleo-F439ZI**.
 
 ## 🎯 Objetivos
-- **Dominar el modo Input Capture** para la detección de flancos y medición de ancho de pulso.
-- **Implementar una base de tiempo de microsegundos** de alta precisión utilizando el contador de ciclos de CPU (**DWT**).
+- **Dominar el modo Input Capture** para la detección de flancos y medición de ancho de pulso por hardware.
+- **Implementar una Arquitectura de 3 Capas** (Hardware Mapping, Drivers y Aplicación) para garantizar la portabilidad del firmware.
+- **Implementar una base de tiempo de microsegundos** mediante el contador de ciclos de CPU (**DWT**) para disparos determinísticos.
 - **Desarrollar un Driver No Bloqueante** para sensores ultrasónicos basado en una máquina de estados finitos (FSM).
-- **Garantizar la concurrencia** entre la adquisición de datos (TIM3) y el refresco visual (TIM2) mediante la gestión jerárquica de prioridades en el **NVIC**.
+- **Aplicar robustez de datos** mediante el uso de **Filtros EMA (Exponential Moving Average)** para estabilizar mediciones de sensores ultrasónicos.
+- **Garantizar la concurrencia** entre la adquisición de datos (TIM3), el control de potencia (PWM - TIM4) y el refresco visual (TIM2).
+
+---
+
+## 🔌 Especificaciones de Circuito
+
+<center>
+<img src="./assets/componentes_externos.png" width="1000">
+</center>
+
+
+*   **Sensor Ultrasónico:** HC-SR04 (Alimentado a **5V**).
+*   **Compatibilidad de Niveles:** Dado que el sensor entrega un pulso de Eco de 5V, se ha seleccionado el pin **PA6 (TIM3_CH1)** debido a su característica **FT (Five-volt Tolerant)**, permitiendo la conexión directa sin necesidad de divisores de tensión.
+*   **LED RGB:** 1 LED RGB Ánodo Común.
+*   **Display:** 4 Dígitos 7-Segmentos (Multiplexado).
 
 ---
 
@@ -58,19 +74,6 @@ Para resolver esto, se utiliza el periférico **Data Watchpoint and Trace (DWT)*
 * **Acceso a bajo nivel:** El DWT cuenta ciclos de reloj del CPU ($180 \text{ MHz}$ en la Nucleo-F439ZI), permitiendo resoluciones de nanosegundos.
 * **Independencia de Interrupciones:** A diferencia de los retardos basados en software, el contador `DWT->CYCCNT` es un registro de hardware que incrementa de forma monótona, garantizando un determinismo absoluto en la generación del pulso de disparo.
 
-```c
-/**
- * @brief Retardo de alta precisión en microsegundos.
- * @note Utiliza el contador de ciclos del núcleo (DWT) para evitar bloqueos por interrupción.
- */
-void delay_us(uint32_t us) {
-    uint32_t startTick = DWT->CYCCNT;
-    uint32_t delayTicks = us * (SystemCoreClock / 1000000);
-    
-    // Bucle de espera basado en ciclos reales de CPU
-    while (DWT->CYCCNT - startTick < delayTicks);
-}
-```
 ### 6. Orquestación de Hardware: Especialización de Timers
 
 En este sistema, el microcontrolador actúa como un director de orquesta, delegando tareas críticas de tiempo a tres periféricos de hardware independientes. Esta especialización permite que el núcleo Cortex-M4 se libere de tareas repetitivas y se enfoque exclusivamente en la lógica de control y procesamiento de señales.
@@ -85,8 +88,6 @@ El **TIM2** funciona como el "latido" de la interfaz de usuario.
 * **Función:** Configurado como una base de tiempo pura, genera una interrupción periódica cada $1 \text{ ms}$.
 * **Justificación:** Este intervalo es crítico para el barrido de los 3 dígitos del display de 7 segmentos. Al ejecutarse por hardware, garantizamos una tasa de refresco constante que elimina el *flicker* (parpadeo) visual, independientemente de la carga de procesamiento que exista en el lazo principal.
 
-
-
 ---
 
 ### 7. La Importancia de los Callbacks: Arquitectura Reactiva
@@ -99,8 +100,6 @@ Cuando un Timer completa su tarea (ya sea por desbordamiento de tiempo o por cap
 1. **`HAL_TIM_PeriodElapsedCallback` (TIM2):** Es el motor del display. Cada milisegundo, el micro pausa brevemente su ejecución para conmutar al siguiente dígito. Es una tarea de **alta frecuencia y corta duración**.
 2. **`HAL_TIM_IC_CaptureCallback` (TIM3):** Es el núcleo de la telemetría. Solo se ejecuta cuando hay un cambio físico en el pin de Echo. Aquí es donde la **Máquina de Estados** del driver registra los valores de los registros de captura para procesar la información del sensor.
 
-
-
 > **Regla de Diseño en Callbacks:** Las funciones dentro de un callback deben ser atómicas y eficientes. En este proyecto, los callbacks no calculan distancias ni envían datos por UART; simplemente registran valores de hardware y actualizan estados. El procesamiento pesado (como el filtro de mediana o el formateo de datos para la telemetría serie) se delega al `while(1)`.
 
 ### 8. Mapeo de Hardware: Asignación de Pines y Periféricos
@@ -112,9 +111,11 @@ El **TIM3** opera con un Prescaler (PSC) de 89, logrando una base de tiempos de 
 
 | Periférico | Pin | Función | Configuración |
 | :--- | :--- | :--- | :--- |
-| **TIM3_CH1** | **PA6** | **Echo** | Input Capture (Rising/Falling) |
+| **TIM3_CH1** | **PA6** | **Echo** | Input Capture (5V Tolerant) |
 | **GPIO Out** | **PB11** | **Trigger** | Salida Digital (Pulso 10µs via DWT) |
 | **GPIO Out** | **PF13** | **Feedback LED** | Toggle visual dentro del Callback (Azul) |
+
+> **⚠️ NOTA DE SEGURIDAD:** El sensor HC-SR04 requiere 5V para funcionar correctamente. El pin **PA6** de la STM32F439ZI ha sido validado como **5V Tolerant** según el Datasheet (Type FT). No utilice pines que no tengan esta protección para la señal de Echo, ya que podría dañar permanentemente el periférico GPIO.
 
 #### B. Interfaz Visual: Display 7 Segmentos (TIM2)
 El **TIM2** gestiona el refresco asíncrono. Los segmentos están mapeados para optimizar el ruteo de señales en el puerto:
@@ -122,10 +123,10 @@ El **TIM2** gestiona el refresco asíncrono. Los segmentos están mapeados para 
 | Función | Pines (GPIO Out) | Puerto |
 | :--- | :--- | :--- |
 | **Segmentos** | PE5, PE6, PE3, PF8, PF7, PF9, PG1 | Multiplexado A-G |
-| **Habilitadores** | PC8, PC9, PC10 | Control de Cátodos (EN1, EN2, EN3) |
+| **Habilitadores** | PC8, PC9, PC10, PC11 | Control de Cátodos (EN1, EN2, EN3, EN4) |
 
 #### C. Indicador de Estado: LED RGB (TIM4)
-El **TIM4** genera las señales PWM para el control de colorimetría:
+El **TIM4** genera las señales PWM para el control de un led RGB ánodo común:
 
 | Periférico | Pin | Función | Canal |
 | :--- | :--- | :--- | :--- |
@@ -138,37 +139,20 @@ El **TIM4** genera las señales PWM para el control de colorimetría:
 ### 9. Lógica de Control y Seguridad del Sistema
 
 El `main.c` integra estas piezas mediante una lógica de seguridad que garantiza la estabilidad del sistema:
-* **Feedback de Captura:** Se utiliza un LED de diagnóstico (`usr_ledAzul`) dentro del callback del TIM3. Si el LED conmuta pero no hay datos en la UART, se identifica rápidamente un problema de lógica de software y no un fallo en la etapa de captura física.
+* **Feedback de Captura:** Se utiliza un LED de diagnóstico (`LED_FDBK`) dentro del callback del TIM3. Si el LED conmuta pero no hay datos en la UART, se identifica rápidamente un problema de lógica de software y no un fallo en la etapa de captura física.
 * **Gestión de Prioridades:** Mediante el **NVIC**, se asigna una prioridad superior al TIM3 sobre el TIM2. Esto asegura que la medición del sensor (tiempo crítico) nunca sea retrasada por el refresco del display (tarea cosmética), minimizando el *jitter* en la medición.
-
-## ⚠️ Lecciones Aprendidas: Gestión de Memoria y Scope
-
-Durante el desarrollo de este laboratorio, se identificó un problema crítico relacionado con el **alcance (scope)** de las variables de configuración en el proceso de inicialización.
-
-### El Problema
-Al declarar los arreglos de mapeo de pines (`display_pio_t segmentos[]` y `comunes[]`) como variables locales dentro de `main.c`, estos residen en la memoria **Stack**. Al reordenar el código de inicialización, los punteros almacenados en la estructura de control del driver de 7 segmentos quedaban apuntando a direcciones de memoria que eran sobrescritas por otros periféricos (como el sensor ultrasónico o el PWM).
-
-### La Solución: Uso de `static`
-Para garantizar la persistencia de los descriptores de hardware, se implementó el calificador `static`:
-
-```c
-// Dentro de USER CODE BEGIN 2
-static display_pio_t segmentos[] = { ... };
-static display_pio_t comunes[] = { ... };
-```
-### **¿Por qué funciona?**
-* **Persistencia:** La memoria para estas variables se asigna en el segmento de datos (`.data` / `.bss`), no en el stack.
-* **Integridad en ISR:** Asegura que cuando el Timer (TIM2) ejecute la rutina de refresco, los punteros a los puertos y pines sigan siendo válidos y no contengan "basura".
-
-    `Tip de Pro: En sistemas embebidos, si una estructura de control va a guardar la dirección (puntero) de una tabla de configuración, esa tabla debe ser siempre static o Global.`
 
 ## 🏁 Conclusión
 
-Este laboratorio consolida el aprendizaje sobre la reactividad del hardware:
+Este proyecto representa la consolidación en el dominio de los periféricos de captura y la arquitectura de software profesional:
 
-1. Se logró una precisión de microsegundos mediante el uso de Input Capture, eliminando el error de latencia del software.
-2. El uso de DWT demuestra cómo acceder a registros internos del Cortex-M4 para tareas de temporización crítica que exceden las capacidades de la HAL estándar.
-3. La implementación del multiplexado asíncrono garantiza que la interfaz de usuario no degrade el rendimiento de la adquisición de datos.
+1. **Input Capture como Eje Central:** Se logró dominar la capacidad de los Timers para digitalizar el tiempo. El hardware actúa como un registrador de eventos ultra-veloz, permitiendo que el microcontrolador "vea" y cronometre flancos físicos con precisión de microsegundos, sin intervención del CPU durante el evento.
+2. **El Sensor como Aplicación Técnica:** El uso del HC-SR04 sirvió como el escenario perfecto para validar que la telemetría de precisión no depende de leer pines digitalmente (*polling*), sino de la capacidad del silicio para capturar marcas de tiempo (timestamps) en los registros CCR.
+3. **Abstracción y Robustez:** La implementación de una arquitectura de 3 capas y una PAL universal demuestra que se puede tener un control de hardware de bajo nivel (Input Capture) manteniendo un firmware escalable, portable y reactivo.
+4. **Determinismo Absoluto:** Mediante la combinación del periférico IC y la base de tiempos DWT, el sistema garantiza que cada centímetro medido es el resultado de un proceso determinístico de hardware, eliminando el error humano de software y las latencias de interrupción.
 
 ---
-*"Nivel Intermedio: Reactividad de hardware y captura determinística de eventos. El Input Capture es la herramienta fundamental que permite al microcontrolador digitalizar el tiempo, transformando flancos de señales físicas en datos precisos para el análisis de sistemas en tiempo real."*
+*"Nivel Intermedio: Reactividad de hardware y captura determinística de eventos. El Input Capture es la herramienta definitiva que permite al microcontrolador transformar el tiempo físico en datos digitales de alta precisión."*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.
