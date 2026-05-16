@@ -31,6 +31,11 @@ Para este proyecto utilizo un stack de herramientas estándar de la industria:
 * **Entorno e Infraestructura:** Configuración profesional del **STM32CubeIDE**, inicialización estructurada de proyectos y anatomía de los bloques `USER CODE` en el `main.c`.
 * **Capa 1 (Hardware Mapping):** Modularización semántica del hardware utilizando el archivo `main.h` y las *User Labels* como muro de contención ante cambios eléctricos.
 
+### 🔌 [Drivers Propios (Capa 2)](./Drivers/) — 🚀 EN CURSO —
+*Lógica de control soberana, modular y agnóstica al silicio mediante inyección de dependencias (PAL):*
+* **Actuadores y Displays:** Implementación orientada a objetos para el control de **LEDs RGB**, **motores paso a paso** y multiplexación de **displays de 7 segmentos.**
+* **Sensores y Captura:** Adquisición y acondicionamiento asíncrono de señales físicas, como la telemetría de distancia no bloqueante con el sensor de ultrasonido **HC-SR04**.
+* **Infraestructura de Servicios:** El corazón portátil del firmware (`hal_interface.h`). Define las tablas de despacho y contratos lógicos que rompen el acoplamiento con la HAL de ST.
 
 ### 🏗️ [01_Nivel Básico (GPIO & Lógica de Control)](./01_Nivel_Basico/) - ✅ COMPLETADO -
 *Fundamentos de electrónica digital y programación estructurada:*
