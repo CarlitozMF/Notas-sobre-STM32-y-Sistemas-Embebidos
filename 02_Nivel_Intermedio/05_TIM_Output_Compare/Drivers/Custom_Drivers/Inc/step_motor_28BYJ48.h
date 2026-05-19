@@ -1,78 +1,82 @@
 /**
  * @file step_motor_28BYJ48.h
- * @author CarlitozMF
- * @brief Driver genérico y encapsulado para el motor paso a paso 28BYJ-48.
- * @version 1.1
- * @date 2026-01-27
- * * @details Este driver permite controlar múltiples motores utilizando una estructura
- * de handle. Soporta modos Full-Step y Half-Step mediante tablas de estados.
+ * @brief Driver agnóstico y modular para el control de motores paso a paso 28BYJ-48.
+ * @author Mamani Flores Carlos (UTN FRT)
+ * @details Este archivo define el "contrato" y las estructuras de control necesarias
+ * para operar motores paso a paso unipolar mediante el arreglo Darlington ULN2003.
+ * Utiliza una Capa de Abstracción de Hardware (PAL) para desvincular por completo
+ * la lógica de secuenciamiento y el acumulador de fase elástico (Output Compare)
+ * de los registros específicos del silicio (STM32, AVR, NXP, etc.).
+ * @version 2.0
+ * @date 2026
  */
 
 #ifndef STEP_MOTOR_28BYJ48_H_
 #define STEP_MOTOR_28BYJ48_H_
 
-#include "main.h"
+#include "hal_interface.h"
+#include <stdint.h>
+#include <stdbool.h>
 
-/**
- * @enum Step_Mode_t
- * @brief Modos de excitación de las bobinas del motor.
- */
 typedef enum {
-    MODE_FULL_STEP = 0,    /*!< 4 pasos por secuencia. Mayor torque, mayor vibración. */
-    MODE_HALF_STEP = 1     /*!< 8 pasos por secuencia. Mayor suavidad y precisión.    */
+    MODE_FULL_STEP = 0,    /**< 4 pasos por secuencia. Mayor torque. */
+    MODE_HALF_STEP = 1     /**< 8 pasos por secuencia. Mayor suavidad. */
 } Step_Mode_t;
 
-/**
- * @enum Step_Dir_t
- * @brief Sentido de giro del motor.
- */
 typedef enum {
-    STEP_CW  = 0,          /*!< Sentido horario (Clockwise).        */
-    STEP_CCW = 1           /*!< Sentido antihorario (Counter-Clockwise). */
+    STEP_CW  = 0,          /**< Sentido horario (Clockwise). */
+    STEP_CCW = 1           /**< Sentido antihorario (Counter-Clockwise). */
 } Step_Dir_t;
 
 /**
- * @struct Stepper_Handle_t
- * @brief Estructura de control para el encapsulamiento de cada instancia del motor.
+ * @struct Stepper_t
+ * @brief Handle de control encapsulado e independiente del hardware.
  */
 typedef struct {
-    GPIO_TypeDef* GPIO_Ports[4]; /*!< Puertos GPIO para las señales IN1, IN2, IN3, IN4. */
-    uint16_t      GPIO_Pins[4];  /*!< Pines GPIO para las señales IN1, IN2, IN3, IN4.   */
-    int8_t        current_step;  /*!< Índice del paso actual en la secuencia.           */
-    Step_Mode_t   mode;          /*!< Modo de operación seleccionado.                   */
-    Step_Dir_t    direction;     /*!< Sentido de giro actual.                           */
-    uint8_t       is_active;     /*!< Flag de estado del motor (1: Activo, 0: Parado).  */
+    generic_gpio_t  pins[4];       /**< Mapeo agnóstico de IN1, IN2, IN3, IN4 */
+    generic_pwm_t   oc_channel;    /**< Canal/Timer asociado a la alarma OC */
+    hal_interface_t pal;           /**< Tabla de despacho de servicios de plataforma */
+
+    int8_t          current_step;  /**< Índice del paso actual en la secuencia */
+    Step_Mode_t     mode;          /**< Modo de operación (Full/Half) */
+    Step_Dir_t      direction;     /**< Sentido de giro actual */
+    uint32_t        step_delay;    /**< Delta de tiempo para el acumulador de fase (ticks) */
+    bool            is_active;     /**< Flag de estado de movimiento (true/false) */
 } Stepper_t;
 
-/* --- Prototipos de Funciones --- */
+/* --- API Pública de Control --- */
 
 /**
- * @brief Inicializa la estructura del motor y configura el estado inicial.
- * @param hstepper Puntero al handle del motor.
- * @param ports Arreglo de punteros a los puertos GPIO (orden IN1 a IN4).
- * @param pins Arreglo de pines GPIO correspondientes.
- * @param mode Modo de paso (Full o Half).
+ * @brief Inicializa la estructura del motor inyectando las dependencias de la plataforma.
  */
-void Stepper_Init(Stepper_t* hstepper, GPIO_TypeDef* ports[], uint16_t pins[], Step_Mode_t mode);
+void Stepper_Init(Stepper_t* hstepper, generic_gpio_t pins[], generic_pwm_t oc_ch,
+                  Step_Mode_t mode, uint32_t initial_delay, hal_interface_t pal);
 
 /**
- * @brief Ejecuta un paso de la secuencia basándose en el modo y la dirección.
- * @note Esta función debe ser llamada desde el Callback de Output Compare.
- * @param hstepper Puntero al handle del motor.
- */
-void Stepper_Step_Sequential(Stepper_t* hstepper);
-
-/**
- * @brief Configura el sentido de giro.
- * @param hstepper Puntero al handle del motor.
- * @param dir Sentido de giro (STEP_CW o STEP_CCW).
+ * @brief Configura dinámicamente el sentido de giro.
  */
 void Stepper_Set_Direction(Stepper_t* hstepper, Step_Dir_t dir);
 
 /**
- * @brief Detiene el motor apagando todas las bobinas (ahorro de energía).
- * @param hstepper Puntero al handle del motor.
+ * @brief Configura dinámicamente el delay entre pasos (Velocidad / RPM).
+ */
+void Stepper_Set_Delay(Stepper_t* hstepper, uint32_t delay);
+
+/**
+ * @brief Arranca el movimiento del motor.
+ */
+void Stepper_Start(Stepper_t* hstepper);
+
+/**
+ * @brief Detiene el motor desenergizando bobinas de forma inmediata (Protección térmica).
  */
 void Stepper_Stop(Stepper_t* hstepper);
+
+/**
+ * @brief Manejador asíncrono de interrupción por Output Compare.
+ * @details Debe ser llamado desde el Callback físico del Timer de la plataforma.
+ * Resuelve la lógica de pasos y actualiza de forma elástica el acumulador de fase.
+ */
+void Stepper_OC_Handler(Stepper_t* hstepper);
 
 #endif /* STEP_MOTOR_28BYJ48_H_ */

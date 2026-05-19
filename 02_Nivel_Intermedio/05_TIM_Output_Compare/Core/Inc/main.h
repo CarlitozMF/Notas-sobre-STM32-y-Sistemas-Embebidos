@@ -104,8 +104,8 @@ void Error_Handler(void);
 #define RGB_R_GPIO_Port GPIOD
 #define RGB_G_Pin GPIO_PIN_14
 #define RGB_G_GPIO_Port GPIOD
-#define RGB_GD15_Pin GPIO_PIN_15
-#define RGB_GD15_GPIO_Port GPIOD
+#define RGB_B_Pin GPIO_PIN_15
+#define RGB_B_GPIO_Port GPIOD
 #define USB_PowerSwitchOn_Pin GPIO_PIN_6
 #define USB_PowerSwitchOn_GPIO_Port GPIOG
 #define USB_OverCurrent_Pin GPIO_PIN_7
@@ -120,6 +120,8 @@ void Error_Handler(void);
 #define TCK_GPIO_Port GPIOA
 #define EN3_Pin GPIO_PIN_10
 #define EN3_GPIO_Port GPIOC
+#define EN4_Pin GPIO_PIN_11
+#define EN4_GPIO_Port GPIOC
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
 

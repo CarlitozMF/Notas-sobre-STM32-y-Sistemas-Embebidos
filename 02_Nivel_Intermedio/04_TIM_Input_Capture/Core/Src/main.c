@@ -57,14 +57,11 @@ UART_HandleTypeDef huart3;
 /* --- Objeto para el Sensor Ultrasonico --- */
 sensor_hcsr04_t ultrasonic;
 
-/* --- Objeto para el display --- */
-display_7seg_t hDisp;
-
 /* --- Objeto para el Led RGB --- */
 rgb_led_t ledRGB;
 
-/* --- Objeto para los display de 7 segmentos --- */
-display_7seg_t Display;
+/* --- Objeto para los display  --- */
+display_7seg_t hDisp;
 uint8_t bufferDisplay[4]; //buffer para la cantidad de displays
 
 // Variables de control
@@ -170,18 +167,18 @@ void Actualizar_Alerta_Visual(float d) {
 	if (d < 10.0f) {
 		// ROJO: Peligro inminente
 		RGB_LED_SetColor(&ledRGB, 255, 0, 0);
-		Display7Seg_SetFlash(&Display, 200); // Parpadeo rápido (200ms)
+		Display7Seg_SetFlash(&hDisp, 200); // Parpadeo rápido (200ms)
 	}
 	else if (d < 30.0f) {
 		// NARANJA: Advertencia (Cuidado)
 		// Nota: 120 en G produce un naranja equilibrado en ánodo común
 		RGB_LED_SetColor(&ledRGB, 255, 100, 0);
-		Display7Seg_SetFlash(&Display, 0);   // Parpadeo OFF
+		Display7Seg_SetFlash(&hDisp, 0);   // Parpadeo OFF
 	}
 	else {
 		// VERDE: Zona segura
 		RGB_LED_SetColor(&ledRGB, 0, 255, 0);
-		Display7Seg_SetFlash(&Display, 0);   // Parpadeo OFF
+		Display7Seg_SetFlash(&hDisp, 0);   // Parpadeo OFF
 	}
 }
 

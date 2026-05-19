@@ -21,8 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "rgb_driver.h"
-#include "Display_7Seg_stm32.h"
+#include "rgb_led.h"
+#include "Display_7Seg.h"
 #include "step_motor_28BYJ48.h"
 #include "stdio.h"
 #include "string.h"
@@ -53,11 +53,11 @@ UART_HandleTypeDef huart3;
 /* USER CODE BEGIN PV */
 
 /* --- Objeto para el Led RGB --- */
-RGB_LED_t ledRGB;
+rgb_led_t ledRGB;
 
 /* --- Objeto para los display de 7 segmentos --- */
 display_7seg_t Display;
-uint8_t bufferDisplay[3]; //buffer para la cantidad de displays
+uint8_t bufferDisplay[4]; //buffer para la cantidad de displays
 
 /* --- Objeto para el motor --- */
 Stepper_t motor1;
@@ -74,7 +74,7 @@ uint32_t last_telemetry_tick = 0;
 uint32_t last_display_tick = 0;
 
 char uart_buf[100];
-uint32_t step_delay = 900; // 850 us entre medios pasos = velocidad inicial
+uint32_t step_delay = 900; // marca la velocidad del motor
 
 /* USER CODE END PV */
 
@@ -87,9 +87,20 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
-/* --- Prototipos de Funciones Auxiliares --- */
+/* --- Prototipos de Funciones de Aplicación --- */
 void Debug_Log(const char *msg);
 void Update_Display_String(void);
+
+/* --- Prototipos de Funciones Adaptadoras (Capa de Acoplamiento / PAL) --- */
+void	 PAL_STM32_GPIO_Write(generic_gpio_t gpio, bool state);
+void     PAL_STM32_PWM_Write(generic_pwm_t ch, uint16_t value);
+uint32_t PAL_STM32_GetTick(void);
+uint32_t PAL_STM32_OC_Read(generic_pwm_t ch);
+void	 PAL_STM32_OC_Write(generic_pwm_t ch, uint32_t value);
+
+void     PAL_Display_WritePin(display_gpio_t pin, bool state);
+bool     PAL_Display_ReadPin(display_gpio_t pin);
+uint32_t PAL_Display_GetTick(void);
 
 /* USER CODE END PFP */
 
@@ -104,13 +115,60 @@ void Update_Display_String(void) {
 	char status_str[5];
 	if (current_state == MOTOR_RUNNING) {
 		float rpm = (60.0f * 1000000.0f) / (step_delay * 4096.0f);
-		char dir_char = (motor1.direction == STEP_CW) ? 'H' : 'A';
-		sprintf(status_str, "%c%02d", dir_char, (int)rpm);
+
+		// CORREGIDO: Puntero a string con comillas dobles
+		const char* dir_str = (motor1.direction == STEP_CW) ? "SH" : "SA";
+
+		// CORREGIDO: Cambiamos %c por %s
+		sprintf(status_str, "%s%02d", dir_str, (int)rpm);
 		Display7Seg_WriteString(&Display, status_str);
 	} else {
 		Display7Seg_WriteString(&Display, "StP");
 	}
 }
+
+/* ========================================================================== */
+/* ---- IMPLEMENTACIÓN DE ADAPTADORES DE HARDWARE (CONTRATOS PAL) ----------- */
+/* ========================================================================== */
+
+/* --- Adaptadores para PAL Universal --- */
+
+void PAL_STM32_GPIO_Write(generic_gpio_t gpio, bool state) {
+    HAL_GPIO_WritePin((GPIO_TypeDef*)gpio.port, gpio.pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+void PAL_STM32_PWM_Write(generic_pwm_t ch, uint16_t value) {
+	__HAL_TIM_SET_COMPARE((TIM_HandleTypeDef*)ch.timer_handle, ch.channel, value);
+}
+
+uint32_t PAL_STM32_GetTick(void) {
+	return HAL_GetTick();
+}
+
+uint32_t PAL_STM32_OC_Read(generic_pwm_t ch) {
+    return HAL_TIM_ReadCapturedValue((TIM_HandleTypeDef*)ch.timer_handle, ch.channel);
+}
+
+void PAL_STM32_OC_Write(generic_pwm_t ch, uint32_t value) {
+    __HAL_TIM_SET_COMPARE((TIM_HandleTypeDef*)ch.timer_handle, ch.channel, value);
+}
+
+
+/* --- Adaptadores para PAL del Display de 7 Segmentos --- */
+void PAL_Display_WritePin(display_gpio_t pin, bool state) {
+	HAL_GPIO_WritePin((GPIO_TypeDef*)pin.port, pin.pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+bool PAL_Display_ReadPin(display_gpio_t pin) {
+	return (HAL_GPIO_ReadPin((GPIO_TypeDef*)pin.port, pin.pin) == GPIO_PIN_SET);
+}
+
+uint32_t PAL_Display_GetTick(void) {
+	return HAL_GetTick();
+}
+
+
+
 
 /* USER CODE END 0 */
 
@@ -159,70 +217,76 @@ int main(void)
 	Debug_Log(">>> Iniciando Perifericos...\r\n");
 
 
-	// ***********************Configuracion del motor paso a paso********************
-	// 1. Definición de pines para el driver genérico
-	GPIO_TypeDef* ports_A[] = {IN1_GPIO_Port, IN2_GPIO_Port, IN3_GPIO_Port, IN4_GPIO_Port};
-	uint16_t pins_A[] = {IN1_Pin, IN2_Pin, IN3_Pin, IN4_Pin};
+	// *********************** CONFIGURACION DEL MOTOR (TEMPORAL) ********************
+	hal_interface_t motor_pal = {
+	    .gpio_write = PAL_STM32_GPIO_Write, // Reutiliza el de GPIO que ya tenías
+	    .oc_read    = PAL_STM32_OC_Read,
+	    .oc_write   = PAL_STM32_OC_Write
+	};
 
-	// 2. Inicialización del motor
-	Stepper_Init(&motor1, ports_A, pins_A, MODE_HALF_STEP);
-	Stepper_Stop(&motor1); // Fuerza a que todas las bobinas inicien en LOW
-	motor1.current_step = 0; // Aseguramos el punto de partida
-	Debug_Log("[OK] Driver Stepper: Secuencia Half-Step Lista\r\n");
+	generic_gpio_t motor_pins[] = {
+	    {IN1_GPIO_Port, IN1_Pin}, {IN2_GPIO_Port, IN2_Pin},
+	    {IN3_GPIO_Port, IN3_Pin}, {IN4_GPIO_Port, IN4_Pin}
+	};
+	generic_pwm_t motor_oc = { .timer_handle = &htim5, .channel = TIM_CHANNEL_1 };
 
-	// 3. Sincronización del Timer: Programamos el primer evento de comparación
-	// Le decimos al Timer: "Interrumpí en el valor actual + el delay"
+	Stepper_Init(&motor1, motor_pins, motor_oc, MODE_HALF_STEP, step_delay, motor_pal);
+	Stepper_Stop(&motor1);
+	Debug_Log("[OK] Driver Stepper Temporal Activo\r\n");
+
+	// Sincronización Inicial del Output Compare (TIM5)
 	uint32_t initial_capture = __HAL_TIM_GET_COUNTER(&htim5);
 	__HAL_TIM_SET_COMPARE(&htim5, TIM_CHANNEL_1, initial_capture + step_delay);
-
-	// 4. Iniciar el Timer en modo Output Compare con Interrupción
 	HAL_TIM_OC_Start_IT(&htim5, TIM_CHANNEL_1);
-	Debug_Log("[OK] Periferico TIM5: Output Compare Activo\r\n");
+	Debug_Log("[OK] Periferico TIM5: Output Compare Sincronizado\r\n");
 
-	// 5. Reporte de configuración inicial
-	char init_msg[60];
-	sprintf(init_msg, "[INFO] Delay: %lu us | RPM Estimadas: %.2f\r\n",
-			step_delay, (60.0f * 1000000.0f) / (step_delay * 4096.0f));
-	Debug_Log(init_msg);
-
-	// ***********************Configuracion de los Display 7 Segmentos********************
-	// Configuración de Pines del Display (Usando Labels del .ioc)
-	static display_pio_t segmentos[] = {
+	// *********************** CONFIGURACION DEL DISPLAY DE 7 SEGMENTOS ********************
+	// 1. Mapeo de Hardware a tipos display_gpio_t
+	static display_gpio_t segmentos[] = {
 			{SEG_A_GPIO_Port, SEG_A_Pin}, {SEG_B_GPIO_Port, SEG_B_Pin},
 			{SEG_C_GPIO_Port, SEG_C_Pin}, {SEG_D_GPIO_Port, SEG_D_Pin},
 			{SEG_E_GPIO_Port, SEG_E_Pin}, {SEG_F_GPIO_Port, SEG_F_Pin},
 			{SEG_G_GPIO_Port, SEG_G_Pin}
 	};
-	static display_pio_t comunes[] = {
-			{EN1_GPIO_Port, EN1_Pin},
-			{EN2_GPIO_Port, EN2_Pin},
-			{EN3_GPIO_Port, EN3_Pin}
+	static display_gpio_t comunes[] = {
+			{EN4_GPIO_Port, EN4_Pin}, {EN3_GPIO_Port, EN3_Pin},
+			{EN2_GPIO_Port, EN2_Pin}, {EN1_GPIO_Port, EN1_Pin}
 	};
 
-	//Iniciar Driver
-	Display7Seg_Init(&Display, &htim2, segmentos, comunes, 3, bufferDisplay);
-	HAL_TIM_Base_Start_IT(&htim2);
-	Display7Seg_WriteString(&Display, "HI ");
-	Debug_Log("[OK] Periferico TIM2: Multiplexado Display\r\n");
-
-	//***********************Configuracion del LED RGB Anodo Comun***********************
-	// 1. Empaquetamos la configuración de hardware
-	RGB_Config_t configRGB = {
-			.htim = &htim4,						//Timer utilizado para el led RGB
-			.R_channel = TIM_CHANNEL_2,			//RGB_R pin
-			.G_channel = TIM_CHANNEL_3,			//RGB_G pin
-			.B_channel = TIM_CHANNEL_4,			//RGB_B pin
-			.led_type = LED_TYPE_ANODE_COMMON,	//Tipo de RGB -Cambiar si es catodo comun-
-			.max_brightness = 500				//Brillo 0-1000
+	// 2. Vinculación de la vtable (PAL) específica
+	display_7seg_pal_t display_pal = {
+			.write_pin = PAL_Display_WritePin,
+			.read_pin  = PAL_Display_ReadPin,
+			.get_tick  = PAL_Display_GetTick
 	};
-	// 2. Inicializamos el driver con el paquete
-	RGB_Init_Single(&ledRGB, &configRGB);
-	Debug_Log("[OK] Periferico TIM4: PWM RGB Activo\r\n");
-	// Configuración inicial estética
+
+	// 3. Inicialización del objeto
+	Display7Seg_Init(&Display, display_pal, segmentos, comunes, 4, bufferDisplay, DISPLAY_CATHODE);
+	HAL_TIM_Base_Start_IT(&htim2); // Arranca el latido del multiplexado (TIM2 ISR)
+
 	Display7Seg_SetBrightness(&Display, 80);
-	Display7Seg_WriteString(&Display, "StP"); // Mensaje de "Stop" al arrancar
-	Debug_Log(">>> Sistema listo...\r\n\r\n");
+	Display7Seg_WriteString(&Display, "HOLA");
+	HAL_Delay(1000);
+	Debug_Log("[OK] Driver 7 Segmentos: Objeto Inicializado con PAL\r\n");
 
+	// *********************** CONFIGURACION DEL LED RGB SOBERANO ***********************
+	// 1. Descriptores genéricos de canales PWM
+	generic_pwm_t ch_r = { .timer_handle = &htim4, .channel = TIM_CHANNEL_2 };
+	generic_pwm_t ch_g = { .timer_handle = &htim4, .channel = TIM_CHANNEL_3 };
+	generic_pwm_t ch_b = { .timer_handle = &htim4, .channel = TIM_CHANNEL_4 };
+
+	// 2. Vinculación de la vtable (PAL) Universal
+	hal_interface_t led_pal = {
+			.pwm_write = PAL_STM32_PWM_Write,
+			.get_tick  = PAL_STM32_GetTick
+	};
+
+	// 3. Inicialización del objeto agnóstico (Curva Gamma incorporada)
+	RGB_LED_Init(&ledRGB, ch_r, ch_g, ch_b, RGB_ANODE_COMMON, 500, led_pal);
+	RGB_LED_SetColor(&ledRGB, 1000, 0, 0); // Estado inicial rojo estático (STOP)
+	Debug_Log("[OK] Driver LED RGB: Inicializado con PAL Universal\r\n");
+
+	Debug_Log(">>> Infraestructura Lista. Corriendo Scheduler...\r\n\r\n");
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -235,61 +299,54 @@ int main(void)
 
 		uint32_t current_tick = HAL_GetTick();
 
-		/* --- Tarea 1: Motor de Efectos RGB --- */
-		// Se encarga de las transiciones suaves si hay efectos activos
-		RGB_Effects_Handler(&ledRGB, 20, 5);
+		/* --- Tarea 1: Tarea periódica de Efectos RGB (No bloqueante) --- */
+		// Procesa las transiciones cromáticas de la Capa 2
+		RGB_LED_Task(&ledRGB, 15, 5);
 
-		/* --- Tarea 2: Gestión de Banderas (Eventos de Botones PB10/PB11) --- */
+		/* --- Tarea 2: Máquina de Estados de la Aplicación (Banderas EXTI) --- */
 		if (flag_update_display) {
 			flag_update_display = 0;
 
 			if (current_state == MOTOR_RUNNING) {
-				RGB_Stop_Effect(&ledRGB);
-				Display7Seg_SetFlash(&Display, 0);
+				RGB_LED_StopEffect(&ledRGB);
+				Display7Seg_SetFlash(&Display, 0); // Sólido en marcha
 
-				// Cambio de color dinámico por dirección
+				// Asignación semántica de colores según dirección de giro
 				if (motor1.direction == STEP_CW) {
-					RGB_Set_Preset(&ledRGB, COLOR_GREEN);
-					Debug_Log("[EVENT] Motor START / Direction: CW\r\n");
+					RGB_LED_SetColor(&ledRGB, 0, 1000, 0); // Verde Puro con Gamma
+					Debug_Log("[EVENT] Motor RUN -> Dirección: CW (Horario)\r\n");
 				} else {
-					RGB_Set_Preset(&ledRGB, COLOR_BLUE);
-					Debug_Log("[EVENT] Motor START / Direction: CCW\r\n");
+					RGB_LED_SetColor(&ledRGB, 0, 0, 1000); // Azul Puro con Gamma
+					Debug_Log("[EVENT] Motor RUN -> Dirección: CCW (Antihorario)\r\n");
 				}
 			} else {
-				// Feedback visual de parada
-				RGB_Set_Preset(&ledRGB, COLOR_RED);
-				Display7Seg_SetFlash(&Display, 500);
-				Debug_Log("[EVENT] Motor STOPPED\r\n");
+				// Feedback de parada: Rojo Fijo y Display Destellando
+				RGB_LED_StopEffect(&ledRGB);
+				RGB_LED_SetColor(&ledRGB, 1000, 0, 0); // Rojo de Advertencia
+				Display7Seg_SetFlash(&Display, 500);   // Parpadeo cada 500ms
+				Debug_Log("[EVENT] Motor STOPPED (Lazo Seguro)\r\n");
 			}
 
-			// Sincronizamos el refresco visual inmediato
 			last_display_tick = current_tick;
 			Update_Display_String();
 		}
 
-		/* --- Tarea 3: Telemetría UART (Cada 1000ms) --- */
+		/* --- Tarea 3: Reporte de Telemetría UART (Cada 1000ms) --- */
 		if (current_tick - last_telemetry_tick >= 1000) {
 			last_telemetry_tick = current_tick;
 
 			if (current_state == MOTOR_RUNNING) {
 				float rpm = (60.0f * 1000000.0f) / (step_delay * 4096.0f);
-				/*
-				// Agregamos el INDEX aquí para debuggear el sentido antihorario
 				snprintf(uart_buf, sizeof(uart_buf),
-						"[STATUS] Dir: %d | Index: %d | RPM: %.2f | Delay: %lu us\r\n",
-						motor1.direction, motor1.current_step, rpm, step_delay);*/
-
-		            // Reporte completo de telemetría
-		            snprintf(uart_buf, sizeof(uart_buf),
-		                     "[STATUS] State: RUN | Dir: %s | RPM: %.2f | Delay: %lu us\r\n",
-		                     (motor1.direction == STEP_CW) ? "CW" : "CCW", rpm, step_delay);
+						"[STATUS] State: RUN | Dir: %s | RPM: %.2f | Delay: %lu us\r\n",
+						(motor1.direction == STEP_CW) ? "CW" : "CCW", rpm, step_delay);
 			} else {
-				snprintf(uart_buf, sizeof(uart_buf), "[STATUS] Estado: IDLE | Listo para Comenzar...\r\n");
+				snprintf(uart_buf, sizeof(uart_buf), "[STATUS] State: IDLE | Esperando Comandos de Usuario...\r\n");
 			}
 			Debug_Log(uart_buf);
 		}
 
-		/* --- Tarea 4: Refresco Visual del Display (Cada 200ms) --- */
+		/* --- Tarea 4: Actualización de Memoria de Display (Cada 200ms) --- */
 		if (current_tick - last_display_tick >= 200) {
 			last_display_tick = current_tick;
 			Update_Display_String();
@@ -590,7 +647,7 @@ static void MX_GPIO_Init(void)
 	HAL_GPIO_WritePin(GPIOG, SEG_G_Pin|USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin|EN4_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pins : SEG_C_Pin SEG_A_Pin SEG_B_Pin IN1_Pin
                            IN2_Pin IN3_Pin IN4_Pin */
@@ -640,8 +697,8 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-	/*Configure GPIO pins : EN1_Pin EN2_Pin EN3_Pin */
-	GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|EN3_Pin;
+	/*Configure GPIO pins : EN1_Pin EN2_Pin EN3_Pin EN4_Pin */
+	GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|EN3_Pin|EN4_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -659,10 +716,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /**
- * @brief Callback del Timer para la multiplexación del Display.
- * @note Se ejecuta periódicamente (recomendado cada 2-5ms) para refrescar
- * un dígito a la vez del display de 7 segmentos.
- * @param htim Puntero a la estructura del Timer que generó la interrupción.
+ * @brief Callback de Interrupción de Base de Tiempo (TIM2).
+ * @details El hardware de ST despierta al micro y delega el multiplexado físico
+ * al método de la Capa 2.
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM2) {
@@ -670,24 +726,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	}
 }
 
-
 /**
- * @brief Callback de Interrupción Externa para pines GPIO.
- * @details Gestiona el pulsador en PB10 y PB11 (lógica negativa) para alternar giros y entre
- * los estados de marcha y parada del motor (Toggle). Incluye un
- * mecanismo de debouncing por software.
- * @param GPIO_Pin Pin que disparó la interrupción.
+ * @brief Callback de Interrupción Externa por flanco de bajada (PB10/PB11).
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	uint32_t interrupt_time = HAL_GetTick();
 	static uint32_t last_btn_start_time = 0;
 	static uint32_t last_btn_dir_time = 0;
 
-	/* --- Botón START/STOP (PB11) --- */
+	/* --- Entrada Start/Stop (PB11) --- */
 	if (GPIO_Pin == usr_btn_PS_Pin) {
 		if (interrupt_time - last_btn_start_time > 250) {
 			if (current_state == MOTOR_STOPPED) {
 				current_state = MOTOR_RUNNING;
+				Stepper_Start(&motor1);
 			} else {
 				current_state = MOTOR_STOPPED;
 				Stepper_Stop(&motor1);
@@ -697,46 +749,39 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		}
 	}
 
-	/* --- Botón CAMBIO DE SENTIDO (PB10) --- */
+	/* --- Entrada Cambio de Sentido (PB10) --- */
 	if (GPIO_Pin == usr_btn_G_Pin) {
-			if (interrupt_time - last_btn_dir_time > 250) {
-				// Invertimos el sentido para que coincida con el display
-				if (motor1.direction == STEP_CW) {
-					Stepper_Set_Direction(&motor1, STEP_CCW); // Ahora dirá 'r' y girará CCW
-				} else {
-					Stepper_Set_Direction(&motor1, STEP_CW);  // Ahora dirá 'C' y girará CW
-				}
-				flag_update_display = 1;
-				last_btn_dir_time = interrupt_time;
+		if (interrupt_time - last_btn_dir_time > 250) {
+			if (motor1.direction == STEP_CW) {
+				Stepper_Set_Direction(&motor1, STEP_CCW);
+			} else {
+				Stepper_Set_Direction(&motor1, STEP_CW);
 			}
-		}
-}
-
-
-/**
- * @brief Callback de comparación de salida (Output Compare) del Timer.
- * @details Responsable de la generación de pasos del motor PAP. Si el sistema
- * está en RUNNING, ejecuta un paso. Independientemente del estado,
- * reprograma la próxima comparación para mantener la base de tiempo
- * constante y evitar latencias al arrancar.
- * @param htim Puntero a la estructura del Timer que generó el evento.
- */
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Instance == TIM5) {
-		if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-
-			/* 1. Generación del paso lógico si el motor está habilitado */
-			if (current_state == MOTOR_RUNNING) {
-				Stepper_Step_Sequential(&motor1);
-			}
-
-			/* 2. Reprogramación del evento de comparación (Fase de acumulador) */
-			uint32_t current_capture = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-			__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, current_capture + step_delay);
+			flag_update_display = 1;
+			last_btn_dir_time = interrupt_time;
 		}
 	}
 }
 
+/**
+ * @brief Callback de comparación de salida (Output Compare) del Timer.
+ * @details El hardware de ST genera la interrupción física y asíncrona.
+ * La aplicación valida el canal correspondiente y le delega la
+ * responsabilidad completa del movimiento y del acumulador de fase
+ * al manejador de Capa 2 del objeto motor.
+ * @param htim Puntero a la estructura nativa del Timer de ST que generó el evento.
+ */
+void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {
+    /* 1. Validar que la interrupción provenga del TIM5 y del Canal 1 (Alarma Fantasma) */
+    if (htim->Instance == TIM5) {
+        if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+
+            /* 2. Delegar TODA la lógica al manejador agnóstico de Capa 2 */
+            Stepper_OC_Handler(&motor1);
+
+        }
+    }
+}
 /* USER CODE END 4 */
 
 /**
