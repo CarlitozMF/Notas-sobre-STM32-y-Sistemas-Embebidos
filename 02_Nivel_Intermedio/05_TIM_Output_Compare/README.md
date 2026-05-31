@@ -10,6 +10,20 @@ Este proyecto documenta la implementación del periférico de **Output Compare (
 
 ---
 
+## 🔌 Especificaciones de Circuito
+
+<center>
+<img src="./assets/hardware.png" width="1000">
+</center>
+
+
+*   **Motor Paso a paso:** Motor paso a paso 28BYJ-48 + driver ULN2003.
+*   **LED RGB:** 1 LED RGB Ánodo Común.
+*   **Display:** 4 Dígitos 7-Segmentos (Multiplexado).
+*   **Pulsadores:** 2 botones pulsadores NA (Play/Pausa-CW/CCW).
+
+---
+
 ## 🔩 Teoría de Operación: Output Compare y Generación de Pulsos
 
 ### 1. El Concepto de Output Compare (OC)

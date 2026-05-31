@@ -1,44 +1,60 @@
 /**
  * @file siren_service.h
- * @brief Servicio de gestión de sirenas vehiculares y balizas estroboscópicas.
- * @author Carlos (CarlitozMF)
+ * @author Mamani Flores Carlos (UTN FRT)
+ * @brief Servicio modular para la orquestación cinemática de sirenas y luces de advertencia.
+ * @details Totalmente desacoplado de fabricantes. Opera coordinando objetos generadores
+ * de tonos y descriptores PWM mediante servicios inyectados de plataforma.
+ * @version 2.0
+ * @date 2026
  */
 
 #ifndef SIREN_SERVICE_H_
 #define SIREN_SERVICE_H_
 
-#include "main.h"
-#include "buzzer_oc.h"
+#include "tone_generator.h"
 
 /**
  * @enum SirenMode_t
- * @brief Modos de operación de la sirena.
+ * @brief Modos de operación de la sirena vehicular.
  */
 typedef enum {
-    MODE_OFF,       /*!< Sistema apagado */
-    MODE_WAIL,      /*!< Ambulancia: Barrido de frecuencia lento */
-    MODE_YELP,      /*!< Patrulla: Barrido de frecuencia rápido */
-    MODE_HI_LO,     /*!< Europeo: Alternancia de dos tonos fijos */
-    MODE_HORN       /*!< Bocina de aire (Manual) */
+    MODE_OFF,       /**< Sistema en reposo absoluto */
+    MODE_WAIL,      /**< Patrón Ambulancia: Barrido lineal lento */
+    MODE_YELP,      /**< Patrón Patrulla: Barrido lineal rápido */
+    MODE_HI_LO,     /**< Patrón Europeo: Alternancia bitonal discreta */
+	MODE_WAR,       /**< Sirena de ataque aéreo (Rampa pesada de alta inercia) */
+    MODE_HORN       /**< Bocina de aire manual */
 } SirenMode_t;
 
 /**
- * @brief Inicializa el servicio de sirena vinculando los periféricos.
- * @param buzzer Puntero a la instancia del driver del buzzer.
- * @param htim_leds Puntero al Timer que maneja los LEDs (PWM).
+ * @struct siren_service_t
+ * @brief Estructura de control que encapsula el estado dinámico de un sistema de sirena.
  */
-void Siren_Init(Buzzer_t *buzzer, TIM_HandleTypeDef *htim_leds);
+typedef struct {
+    tone_gen_t      *tone_gen;         /**< Puntero al objeto de Capa 2 encargado del audio */
+    generic_pwm_t   led_ch1;           /**< Descriptor genérico del canal de baliza izquierdo */
+    generic_pwm_t   led_ch2;           /**< Descriptor genérico del canal de baliza derecho */
+    hal_interface_t pal;               /**< Interfaz de servicios del sistema */
+    SirenMode_t     current_mode;      /**< Modo operativo actual */
+    uint32_t        last_siren_tick;   /**< Historial de tiempo de modulación de audio */
+    uint32_t        last_led_tick;     /**< Historial de tiempo del multiplexado estroboscópico */
+    uint32_t        current_freq;      /**< Frecuencia de audio instantánea en ejecución */
+    int16_t         freq_step;         /**< Delta de frecuencia para el perfil de barrido */
+} siren_service_t;
 
 /**
- * @brief Cambia el modo actual de la sirena.
- * @param new_mode Modo seleccionado de SirenMode_t.
+ * @brief Inicializa el servicio de sirena vinculando los periféricos abstractos.
  */
-void Siren_SetMode(SirenMode_t new_mode);
+void SIREN_SERVICE_Init(siren_service_t *siren, tone_gen_t *tg, generic_pwm_t led1, generic_pwm_t led2, hal_interface_t pal_io);
 
 /**
- * @brief Actualiza la lógica de modulación y luces.
- * @note Debe llamarse periódicamente en el while(1).
+ * @brief Transiciona el servicio hacia un nuevo modo de operación de forma segura.
  */
-void Siren_Update(void);
+void SIREN_SERVICE_SetMode(siren_service_t *siren, SirenMode_t new_mode);
+
+/**
+ * @brief Actualiza las máquinas de estado de audio y destellos lógicos. Invocar en el loop cooperativo.
+ */
+void SIREN_SERVICE_Update(siren_service_t *siren);
 
 #endif /* SIREN_SERVICE_H_ */

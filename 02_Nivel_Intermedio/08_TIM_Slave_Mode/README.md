@@ -1,14 +1,52 @@
-# 08_TIM_Slave_Mode: Clasificación de materiales mediante digitalización de frecuencia por Hardware
+ # 08_TIM_Slave_Mode: Clasificación de materiales mediante digitalización de frecuencia por Hardware y Arquitectura PAL
 
-Este proyecto documenta la implementación del modo **Timer Slave (Reset Mode)** para la medición de alta velocidad de señales de frecuencia provenientes de un sensor de color **TCS3200**. Se integra un sistema de visión artificial de 8 estados, un brazo robótico basado en el servo **SG90** con control de trayectoria suave y una arquitectura asíncrona optimizada para la plataforma **Nucleo-F439ZI**.
+Este proyecto documenta la implementación del modo **Timer Slave (External Clock Mode 1)** para la medición de alta velocidad de señales de frecuencia provenientes de un sensor de color **TCS3200**. Se integra una máquina de estados (MEF) de 8 niveles optimizada con firmas analíticas reales, un servo **SG90** con control de trayectoria suave y una arquitectura desacoplada multiplataforma mediante una **PAL (Platform Abstraction Layer)** y utilidades de bajo nivel de hardware (**DWT**) corriendo de forma asíncrona en la plataforma **Nucleo-F439ZI**.
 
 ## 🎯 Objetivos
-- **Dominar el modo Slave (Reset)** para automatizar la captura de periodos sin sobrecarga de interrupciones por software.
-- **Desarrollar una Máquina de Estados (FSM)** capaz de discriminar entre colores primarios (RGB) y secundarios (CMY) con histéresis.
-- **Implementar un Driver de Servomotor Proporcional** con control de velocidad (`speed_dps`) para evitar estrés mecánico.
-- **Garantizar la estabilidad de lectura** mediante técnicas de filtrado de rebotes (debounce) y sincronización de filtros ópticos.
+- **Dominar el modo Slave (External Clock 1)** para automatizar la captura y conteo de pulsos digitales sin sobrecarga de interrupciones por software.
+- **Desarrollar una Máquina de Estados (MEF)** capaz de discriminar entre colores primarios (RGB) y secundarios (CMY) aplicando histéresis y relaciones de aspecto dinámicas basadas en telemetría real.
+- **Implementar una PAL Universal (Platform Abstraction Layer)** para garantizar el desacoplamiento total de la Capa 2 (Drivers de Componentes), permitiendo la portabilidad directa a NXP y AVR.
+- **Utilizar el Contador de Ciclos del Núcleo (DWT)** para generar retardos e intervalos de microsegundos de alta resolución sin dependencia del SysTick nativo.
 
 ---
+
+<center>
+<img src="./assets/hardware.png" width="1000">
+</center>
+
+## 🔩 Especificaciones del Circuito
+
+### 1. Sensor de Color TCS3200
+* **Operación:** Conversión de irradiancia óptica a frecuencia digital proporcional ($f \propto \text{Intensidad}$).
+* **Configuración:** Alimentado a **5V**. Pines `S0/S1` en **HIGH** fijos por PAL (Escala de salida al 100%, hasta $600\text{ kHz}$). Pines `S2/S3` controlados dinámicamente para el multiplexado RGB.
+* **Iluminación:** 4 LEDs blancos frontales controlados por transistor desde el pin `PF13`.
+
+### 2. Servomotor SG90 (Brazo Clasificador)
+* **Operación:** Posicionamiento angular controlado por PWM a **50 Hz** (Periodo de $20\text{ ms}$) mediante el `TIM5_CH1` (32 bits).
+* **Calibración PAL:** $520\,\mu\text{s}$ para $0^{\circ}$ y $2540\,\mu\text{s}$ para $180^{\circ}$.
+* **Mapeo de Estados (Color vs. Ángulo):**
+
+| Estado FSM | Color Detectado | Ángulo del Servo | Acción del Brazo |
+| :--- | :--- | :---: | :--- |
+| `ESTADO_NEGRO` | Fondo / Vacío | **$0^{\circ}$** | Retorno suave a posición de reposo. |
+| `ESTADO_ROJO` | Rojo Puro | **$25^{\circ}$** | Clasificación de pieza Roja. |
+| `ESTADO_AMARILLO`| Mezcla Amarillo | **$50^{\circ}$** | Clasificación de pieza Amarilla. |
+| `ESTADO_VERDE` | Verde Puro | **$75^{\circ}$** | Clasificación de pieza Verde. |
+| `ESTADO_CIAN` | Mezcla Cian | **$100^{\circ}$** | Clasificación de pieza Cian. |
+| `ESTADO_AZUL` | Azul Puro | **$125^{\circ}$** | Clasificación de pieza Azul. |
+| `ESTADO_MAGENTA` | Mezcla Magenta | **$150^{\circ}$** | Clasificación de pieza Magenta. |
+| `ESTADO_BLANCO` | Blanco Saturation | **$180^{\circ}$** | Clasificación de pieza Blanca (Máximo rango). |
+
+### 3. LED RGB (Feedback Visual)
+* **Configuración:** Ánodo común conectado a **3.3V**. Cátodos a pines `PE9/11/13` con resistencias de limitación ($220\,\Omega$ y $330\,\Omega$).
+* **Control:** PWM a $1\text{ kHz}$ (`TIM1` canales 1, 2 y 3) para replicar instantáneamente el color estable de la MEF.
+
+### 4. LED de Estado (Heartbeat)
+* **Componente:** LED Rojo de usuario (`LD3` / Pin **PB8**) integrado en la Nucleo.
+* **Régimen:** Conmutación digital (*Toggle*) asíncrona cada **500 ms** controlada por `HAL_GetTick()`.
+
+---
+
 ### 💡 ¿Qué es el Modo Slave (Esclavo) en un Timer?
 
 En términos simples, usar un Timer en **Modo Slave** es como darle al cronómetro del microcontrolador la capacidad de "reaccionar" automáticamente a eventos externos sin que el procesador principal tenga que intervenir.
@@ -34,28 +72,28 @@ El funcionamiento se basa en tres pasos clave:
 
 El núcleo del proyecto reside en la digitalización precisa de señales de frecuencia y su posterior procesamiento mediante una arquitectura de software basada en eventos.
 
-### 1. Digitalización de Frecuencia: Arquitectura Maestro-Esclavo
-A diferencia de la medición convencional por software (polling), este proyecto utiliza una **ventana de integración por hardware** mediante la sincronización de dos temporizadores de la **Nucleo-F439ZI**:
+### 1. Digitalización de Frecuencia: Arquitectura Maestro-Esclavo por Ventana de Integración
+A diferencia de la medición convencional por software (polling) o por captura de períodos que satura la CPU con ráfagas de interrupciones, este proyecto utiliza una **ventana de integración por hardware** asíncrona mediante la sincronización de dos temporizadores de la **Nucleo-F439ZI**:
 
-* **TIM3 (Maestro de Tiempo):** Funciona como un "metrónomo" configurado para generar una interrupción exacta cada **100 ms**. Esta ventana temporal define la resolución y el tiempo de exposición de nuestra lectura.
-* **TIM4 (Contador Esclavo):** Configurado en **Slave Mode: External Clock Mode 1**. En este modo, el Timer ignora el reloj interno del sistema (Internal Clock) y utiliza los pulsos provenientes del sensor (Pin PA6) como fuente de conteo directa para su registro `CNT`.
+* **TIM3 (Maestro de Tiempo):** Funciona como un "metrónomo" isócrono configurado para generar una interrupción exacta cada **100 ms** ($10\text{ Hz}$). Esta ventana temporal define el tiempo de exposición exacto de nuestra lectura.
+* **TIM4 (Contador Esclavo):** Configurado en **Slave Mode: External Clock Mode 1** (`TIM_SLAVEMODE_EXTERNAL1`). En este modo, el Timer ignora el reloj interno del sistema (Internal Clock) y utiliza los pulsos digitales provenientes del pin `OUT` del sensor (Pin físico **PB6**) para incrementar directamente su registro físico `CNT`.
 
+Al finalizar la ventana de 100ms impuesta por el TIM3, la Capa de Abstracción (PAL) toma una "fotografía" instantánea del registro `CNT` y lo resetea a cero de forma inmediata para la siguiente ventana. El cálculo de la frecuencia en Hz es directo y asíncrono:
 
-> **Ventaja Técnica:** El conteo es **100% determinístico**. El CPU no interviene mientras los pulsos incrementan el contador del TIM4. Al finalizar los 100ms, el valor acumulado representa directamente la frecuencia proporcional a la irradiancia ($f \propto \text{intensidad}$), eliminando el *jitter* y el error por latencia de interrupción.
+$$\text{Frecuencia (Hz)} = \text{Pulsos} \times \left(\frac{1000}{\text{TCS\_MEASURE\_WINDOW\_MS}}\right)$$
 
 ### 2. Digitalización de Color: Reconstrucción del Vector RGB
-El sensor **TCS3200** traduce la intensidad de luz filtrada en una onda cuadrada. Para procesar esta información, el sistema implementa un **Secuenciador de Filtros**:
+El sensor **TCS3200** traduce la intensidad de luz filtrada en una onda cuadrada. Para procesar esta información de forma coherente, el sistema implementa un **Secuenciador de Filtros**:
 
-* **Multiplexado Óptico:** El microcontrolador conmuta los pines `S2` y `S3` en cada ciclo de 100ms, alternando entre los filtros Rojo, Verde y Azul.
-* **Sincronización de Datos:** La lógica de control asegura que la toma de decisiones solo ocurra cuando se completa el ciclo completo ($R \rightarrow G \rightarrow B$). Esto garantiza que la comparación entre canales se realice sobre un vector de color coherente y sincronizado.
+* **Multiplexado Óptico:** El microcontrolador conmuta los pines `S2` y `S3` en cada ciclo de 100ms, alternando secuencialmente entre los filtros Rojo, Verde y Azul.
+* **Sincronización de Datos:** La lógica de control de la MEF (Capa 3) asegura que la toma de decisiones críticas solo ocurra cuando se completa el ciclo completo ($R \rightarrow G \rightarrow B$, detectado en `filtro_actual == 2`). Esto garantiza que la comparación entre canales se realice sobre un vector de color coherente y sincronizado en el tiempo.
 
+### 3. Lógica de Decisión con Histéresis Dinámica y Firmas Analíticas
+Para gestionar la variabilidad física de los materiales y las condiciones lumínicas del entorno, se implementó una **Máquina de Estados Finita (MEF)** calibrada en base a datos empíricos de la terminal serial:
 
-
-### 3. Lógica de Decisión con Histéresis Dinámica
-Para gestionar la variabilidad física de los materiales y las condiciones lumínicas del entorno (UTN FRT Lab), se implementó una **Máquina de Estados Finita (FSM)** con control de histéresis:
-
-* **Histéresis en Estado Crítico:** El color **Blanco** (máxima frecuencia) es propenso a oscilaciones. Se utiliza la estructura `Config_Umbrales_t` para definir un umbral de entrada ($30,000$ Hz) y uno de salida ($12,000$ Hz). Esto evita que pequeñas sombras o vibraciones del objeto disparen cambios de estado erráticos.
-* **Filtro de Estabilidad (Software Debounce):** Para proteger la vida útil de los engranajes del **Servo SG90**, se exige que el `nuevo_estado_raw` se mantenga constante durante al menos 2 ciclos completos de lectura antes de validar y ejecutar el movimiento del actuador.
+* **Histéresis en Estado Blanco:** El color **Blanco** (máxima frecuencia de saturación óptica) es propenso a oscilaciones por reflexiones espurias. Se utiliza la estructura `Config_Umbrales_t` para definir un umbral de entrada elástico (`blanco_entrar = 14000` ticks) y uno de salida (`blanco_salir = 11000` ticks), evitando falsos cambios de estado.
+* **Blindaje contra Fondo Vacío (Negro):** Se fijó el umbral estricto `.negro = 5500`. Cualquier lectura simultánea por debajo de este límite apaga los actuadores, inmunizando al clasificador contra el ruido óptico ambiental ($< 5240\text{ ticks}$).
+* **Discriminación Rojo vs Magenta:** La firma óptica determinó que en el Rojo Puro el canal Azul se planta en `6420`, mientras que en el Magenta real trepa a `8950`. El condicional de la MEF fue blindado con una compuerta rígida de suficiencia (`&& b > 7500`) para separar de raíz ambos estados.
 
 ---
 
@@ -76,7 +114,7 @@ Aquí ocurre la magia de la telemetría de frecuencia. El **TIM4** no cuenta tie
 ### 3. TIM1: Generación de Color (PWM de Alta Velocidad)
 El **TIM1** gestiona la interfaz visual mediante el LED RGB de ánodo común.
 * **Configuración:** Genera tres señales PWM independientes (Canales 1, 2 y 3) con una resolución de 1000 niveles de brillo.
-* **Precisión:** Al ser un Timer de control avanzado, permite cambios de color instantáneos mediante presets (`RGB_Set_Preset`), reflejando el estado de la FSM de color de forma visual.
+* **Precisión:** Al ser un Timer de control avanzado, permite cambios de color instantáneos mediante presets (`RGB_Set_Preset`), reflejando el estado de la MEF de color de forma visual.
 
 ### 4. TIM5: Control de Actuador (Servo de 32 bits)
 Para el brazo robótico, se utiliza el **TIM5** debido a su registro de 32 bits.
@@ -100,214 +138,144 @@ Para el brazo robótico, se utiliza el **TIM5** debido a su registro de 32 bits.
 
 ## 🏗️ Arquitectura del Software: El Modelo de "Tres Capas"
 
-El firmware de este proyecto está diseñado bajo un modelo de abstracción de tres niveles. Esta estructura garantiza que el sistema sea **robusto, escalable y fácil de mantener**, separando la adquisición física de datos de la lógica de aplicación.
-
-### 1. Capa de Hardware y Captura (Segundo Plano / ISR)
-Esta capa opera mediante interrupciones y hardware autónomo, permitiendo que el procesador no pierda ciclos en tareas de cronometría básica:
-
-* **Contador de Pulsos (TIM4):** Funciona de forma totalmente autónoma contando los pulsos digitales del sensor TCS3200 directamente en su registro `CNT`.
-* **Callback de Tiempo (TIM3):** Actúa como el "latido" del sistema. Cada 100ms se ejecuta la rutina `HAL_TIM_PeriodElapsedCallback`, cuya única misión es llamar a `TCS3200_ProcessCallback`. Esta función toma la "fotografía" del contador del TIM4 y levanta el flag `measurement_ready`.
-
-```c
-/**
- * @brief Callback que se ejecuta cuando el TIM3 cumple su periodo (100ms).
- * Actúa como la base de tiempo maestra para la captura del sensor.
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-    // Verificamos que la interrupción venga del TIM3 (Metrónomo)
-    if (htim->Instance == TIM3) {
-        // Ejecutamos la lógica de captura: 
-        // Lee el TIM4 (Contador Esclavo) y levanta el flag measurement_ready
-        TCS3200_ProcessCallback(&colorSensor);
-    }
-}
-```
-
-### 2. Capa de Lógica y Decisión (Primer Plano / Middleware)
-Es el "cerebro" del firmware. Transforma frecuencias crudas en conceptos de color. Se ejecuta en el bucle principal (`while(1)`) pero de forma asíncrona:
-
-* **Secuenciador RGB:** Dentro de `Procesar_Logica_Color`, se gestiona la variable `filtro_actual` para rotar los filtros ópticos. La lógica de decisión se bloquea hasta obtener el vector completo ($R+G+B$) para garantizar coherencia.
-* **Máquina de Estados de Color (FSM):**
-    * **Discriminación:** Evalúa las relaciones de magnitud entre canales para determinar el color dominante.
-    * **Histéresis:** Implementa la estructura `Config_Umbrales_t` para otorgar estabilidad al estado Blanco, evitando oscilaciones por variaciones lumínicas.
-    * **Confirmación (Debounce):** Utiliza un acumulador de estabilidad. Solo si un color es detectado de forma persistente durante 2 ciclos consecutivos, se valida el cambio de `estado_actual`.
-
-```c
-void Procesar_Logica_Color(void) {
-    colorSensor.measurement_ready = 0; // Ack de la medición
-
-    // 1. SECUENCIADOR: Solo procesamos cuando el ciclo RGB está completo
-    if (filtro_actual == 2) {
-        uint32_t r = colorSensor.frequency_red;
-        uint32_t g = colorSensor.frequency_green;
-        uint32_t b = colorSensor.frequency_blue;
-        uint8_t nuevo_estado_raw;
-
-        // 2. HISTÉRESIS: Umbral variable para el color Blanco
-        uint32_t limite_blanco = (estado_actual == ESTADO_BLANCO) ? 
-                                  umbrales.blanco_salir : umbrales.blanco_entrar;
-
-        // 3. DISCRIMINACIÓN: Lógica de decisión por dominancia (Ejemplo Cian)
-        if (b > r && g > r && (g > (b >> 1))) {
-            nuevo_estado_raw = ESTADO_CIAN;
-        } 
-        // ... (resto de la FSM)
-
-        // 4. DEBOUNCE: Confirmación de estabilidad (N=2)
-        if (nuevo_estado_raw != estado_actual) {
-            contador_estabilidad++;
-            if (contador_estabilidad >= umbrales.estabilidad_requerida) {
-                estado_actual = nuevo_estado_raw; // Cambio de estado validado
-                Ejecutar_Accion_Actuadores(estado_actual);
-            }
-        }
-    }
-    // Rotación de filtros S2/S3
-    Siguiente_Filtro(); 
-}
-```
-
-### 3. Capa de Aplicación y Actuadores (Salida)
-Representa la respuesta física del sistema ante los estímulos procesados:
-
-* **Control de Trayectoria (Servo):** Mediante la función `SERVO_SG90_Update`, el servomotor implementa una interpolación lineal. Esto evita movimientos bruscos ("latigazos"), calculando pequeños incrementos de ángulo en cada iteración del bucle principal para lograr un movimiento fluido.
-* **Retroalimentación Visual:** El driver de LED RGB traduce el estado de la FSM en una señal lumínica en tiempo real, facilitando el diagnóstico visual del proceso de clasificación.
-
-```c
-// --- Dentro de Procesar_Logica_Color (Cuando el estado se valida) ---
-switch (estado_actual) {
-    case ESTADO_CIAN:
-        RGB_Set_Preset(&ledRGB, COLOR_CYAN);               // Feedback Visual
-        SERVO_SG90_SetSpeedAngle(&servoBrazo, 100, 180.0f); // Trayectoria Suave
-        Debug_Log(">> ESTABLE: CIAN\r\n");
-        break;
-    // ... otros estados
-}
-
-// --- Dentro del bucle principal (while 1) ---
-while (1) {
-    // La función Update calcula los pasos intermedios del PWM en cada ciclo
-    // permitiendo que el brazo se mueva a una velocidad constante (dps)
-    SERVO_SG90_Update(&servoBrazo); 
-    
-    Heartbeat_Handler(); // Diagnóstico independiente
-}
-```
+El firmware está diseñado bajo un estricto modelo de abstracción de tres niveles, logrando el aislamiento total entre las bibliotecas nativas del fabricante y el negocio de la aplicación.
 
 ```mermaid
 graph TD
-    %% Capa de Hardware (ISR)
-    subgraph Segundo_Plano [Capa de Hardware - ISR]
-        TIM4_Count[TIM4: Contador Esclavo - Acumula Pulsos Externos]
-        TIM3_Int[TIM3: Maestro de Tiempo - Cada 100ms]
-        TIM3_Int -->|Dispara interrupción| Callback[HAL_TIM_PeriodElapsedCallback]
-        Callback -->|Toma foto de CNT y reinicia| Measurement[TCS3200_ProcessCallback]
-        Measurement -->|Set Flag| Ready{measurement_ready}
+    %% Capa 1: Hardware y Bajo Nivel
+    subgraph Capa_1 [Capa 1: Hardware Mapping & Drivers de Plataforma]
+        TIM4_Hardware[TIM4 CNT: Cuenta pulsos externos en PB6]
+        TIM3_Metronomo[TIM3 ISR: Metrónomo cada 100ms]
+        DWT_Clock[DWT->CYCCNT: Base de microsegundos de alta resolución]
+        PAL_Table[hal_interface_t: Tabla de despacho de punteros]
     end
 
-    %% Capa de Lógica (Main Loop)
-    subgraph Primer_Plano [Capa de Lógica - Main Loop]
-        Ready -->|SI| ProcColor[Procesar_Logica_Color]
-        ProcColor --> Secuenciador[Rotar Filtros R-G-B]
-        Secuenciador --> FSM[Máquina de Estados de Color]
-        FSM --> Histeresis[Filtro de Histéresis Dinámica]
-        Histeresis --> Debounce[Confirmación de Estabilidad N=2]
+    %% Capa 2: Abstracción Portátil
+    subgraph Capa_2 [Capa 2: Drivers Agnósticos - Componentes]
+        TCS_Driver[tcs3200.c: TCS3200_ProcessCallback]
+        Servo_Driver[servo_sg90.c: Abstracción del Brazo]
+        LED_Driver[rgb_led.c: Abstracción Visual]
     end
 
-    %% Capa de Salida (Actuadores)
-    subgraph Salida [Capa de Aplicación - Actuadores]
-        Debounce -->|Estado Validado| SetAngle[Calcular Ángulo Objetivo]
-        SetAngle -->|Actualizar Target| ServoDriver[SERVO_SG90_Update]
-        ServoDriver -->|Interpolación Suave| PWM_TIM5[TIM5: Salida PWM a Servo]
-        SetAngle -->|Cambiar Color| RGB_TIM1[TIM1: Salida PWM a LED RGB]
+    %% Capa 3: Aplicación
+    subgraph Capa_3 [Capa 3: Aplicación & MEF]
+        Main_Loop[Bucle Principal asíncrono while 1]
+        MEF_Color[Procesar_Logica_Color: MEF de 8 Estados]
+        Histeresis[Filtro de Histéresis & Margen de Negro > 5500]
+        Debounce[Filtro de Estabilidad Temporal N=2]
     end
 
-    %% Tarea Independiente
-    subgraph Independiente [Diagnóstico]
-        Tick[HAL_GetTick] --> Heartbeat[Heartbeat_Handler]
-        Heartbeat --> LED_Rojo[Toggle LED Rojo]
-    end
-
-    %% Estilos
-    style Segundo_Plano fill:#f9f,stroke:#333,stroke-width:2px
-    style Primer_Plano fill:#bbf,stroke:#333,stroke-width:2px
-    style Salida fill:#bfb,stroke:#333,stroke-width:2px
+    %% Conexiones e Interacciones de Flujo
+    TIM3_Metronomo -->|Dispara ISR| TCS_Driver
+    TCS_Driver -->|1. Lee CNT y Reset por PAL| PAL_Table
+    PAL_Table -->|Mapea a hardware| TIM4_Hardware
+    TCS_Driver -->|2. Retardo Filtros por PAL| DWT_Clock
+    TCS_Driver -->|3. Setea Flag Ready| Main_Loop
+    
+    Main_Loop -->|Ejecuta si hay datos| MEF_Color
+    MEf_Color --> Histeresis --> Debounce
+    Debounce -->|Estado Consolidado| Servo_Driver
+    Debounce -->|Estado Consolidado| LED_Driver
 ```
 
----
-
-### 🔄 Flujo de Ejecución No Bloqueante
-El bucle principal (`main loop`) opera sin el uso de `HAL_Delay()`, permitiendo la concurrencia de tareas:
+### 1. Detalle de Capa 1: Hardware Mapping y Utilidades de Bajo Nivel
+Contiene las funciones adaptadoras que satisfacen los contratos de la PAL universal y el driver modular `utils.c` encargado de inicializar el periférico de rastreo **DWT (Data Watchpoint and Trace)** del núcleo **Cortex-M4**.
 
 ```c
-while (1) {
-    // Tarea de Visión: Solo procesa cuando hay datos nuevos del sensor
-    if (colorSensor.measurement_ready) {
-        Procesar_Logica_Color(); 
-    }
+// Adaptador de la PAL para leer de forma abstracta el contador físico del TIM4
+uint32_t PAL_STM32_GetTimerCounter(generic_pwm_t ch) {
+	return __HAL_TIM_GET_COUNTER((TIM_HandleTypeDef*)ch.timer_handle);
+}
 
-    // Tarea de Movimiento: Calcula la trayectoria del servo continuamente
-    SERVO_SG90_Update(&servoBrazo);
+// Adaptador de la PAL para resetear el registro contador del Timer
+void PAL_STM32_SetTimerCounter(generic_pwm_t ch, uint32_t value) {
+	__HAL_TIM_SET_COUNTER((TIM_HandleTypeDef*)ch.timer_handle, value);
+}
 
-    // Tarea de Monitoreo: Gestión independiente del LED de estado
-    Heartbeat_Handler();
+// Adaptador de la PAL para resolver microsegundos precisos consumiendo el driver utils
+uint32_t PAL_STM32_GetUs(void) {
+	return UTILS_GetUs(); // Acceso directo a DWT->CYCCNT
 }
 ```
+### 2. Detalle de Capa 2: Abstracción de Componentes (Driver Puro C)
+El archivo `tcs3200.c` es **C puro (ANSI C)**, no incluye cabeceras de STMicroelectronics y opera exclusivamente mediante inyección de dependencias (`hal_interface_t`).
 
+```c
+void TCS3200_ProcessCallback(TCS3200_t *sensor) {
+    /* Verificación de los contratos necesarios para la lectura atómica de pulsos */
+    if (sensor == NULL || sensor->pal.get_timer_cnt == NULL || 
+        sensor->pal.oc_write == NULL || sensor->pal.gpio_read == NULL) return;
+
+    /* 1. Captura síncrona y agnóstica de los pulsos del hardware mediante la PAL */
+    uint32_t pulses = sensor->pal.get_timer_cnt(sensor->ic_count_ch);
+    sensor->pal.oc_write(sensor->ic_count_ch, 0); // Reset atómico inmediato del contador
+
+    /* 2. Conversión a frecuencia basada en la ventana configurada */
+    uint32_t frequency_hz = pulses * (1000 / TCS_MEASURE_WINDOW_MS);
+
+    /* 3. Clasificación dinámica leyendo el estado lógico de los pines de forma abstracta */
+    bool s2 = sensor->pal.gpio_read(sensor->pin_s2);
+    bool s3 = sensor->pal.gpio_read(sensor->pin_s3);
+
+    if      (!s2 && !s3) sensor->frequency_red   = frequency_hz;
+    else if (!s2 &&  s3) sensor->frequency_blue  = frequency_hz;
+    else if ( s2 && !s3) sensor->frequency_clear = frequency_hz;
+    else if ( s2 &&  s3) sensor->frequency_green = frequency_hz;
+
+    sensor->measurement_ready = 1; // Notificación asíncrona a Capa 3
+}
+```
+### 3. Detalle de Capa 3: Lógica de Aplicación
+Gobernada por el bucle principal no bloqueante (`while(1)`). Consume el vector de frecuencia limpio de la Capa 2 y aplica la lógica analítica de toma de decisiones e interpolación lineal de trayectoria del servo brazo.
+
+```c
+// Sección crítica del clasificador analítico de la MEF (Diferenciación de Mezclas)
+
+// AMARILLO (R y G explotan hacia arriba, superan holgadamente al Azul)
+if (r > (b * 1.3f) && g > (b * 1.1f) && r > 12000) {
+    nuevo_estado_raw = ESTADO_AMARILLO;
+}
+// MAGENTA (Exigimos que B supere los 7500 para dejar afuera al Rojo Puro de 6420)
+else if (r > (g * 1.5f) && b > (g * 1.5f) && b > 7500) {
+    nuevo_estado_raw = ESTADO_MAGENTA;
+}
+```
 ## 🛡️ Detalles de Robustez y Optimización
 
-El desarrollo de este firmware no solo se centró en la funcionalidad, sino también en la eficiencia y la resiliencia del sistema ante fallos o cambios de entorno.
-
-### 1. Encapsulamiento de Umbrales (Configuración vs. Lógica)
-Al implementar la estructura `Config_Umbrales_t umbrales`, se logra una separación clara entre los parámetros de configuración y el algoritmo de decisión. 
-* **Ventaja:** Esto permite que el sistema sea reutilizable en diferentes condiciones de iluminación (laboratorio vs. exterior) simplemente modificando los valores de la estructura al inicio del código, sin necesidad de alterar la lógica interna de la máquina de estados.
-
-
-
-### 2. Optimización por Bit-Shifting (Eficiencia de CPU)
-En la lógica de discriminación de colores (específicamente en el duelo entre **Cian** y **Azul**), se utiliza el operador de desplazamiento de bits a la derecha (`b >> 1`) en lugar de una división por punto flotante (`/ 2.0f`).
-* **Justificación Técnica:** El procesador ARM Cortex-M4 ejecuta el desplazamiento de bits en un solo ciclo de reloj, mientras que las operaciones de punto flotante son más costosas en términos de ciclos de CPU. Esta es una práctica estándar en sistemas de tiempo real para maximizar el rendimiento.
-
-### 3. Independencia del "Heartbeat" (Diagnóstico en tiempo real)
-El uso de `HAL_GetTick()` en el `Heartbeat_Handler` permite que el LED de estado parpadee de forma totalmente independiente a la lógica del sensor.
-* **Resiliencia:** Si el sensor de color se desconecta o falla, el LED de la placa seguirá parpadeando. Esto funciona como un watchdog visual que indica que el núcleo del sistema sigue vivo y ejecutando el bucle principal, facilitando enormemente las tareas de depuración en campo.
+1. **Filtro de Estabilidad Temporal (Debounce de Capa 3):** Para neutralizar rebotes ópticos transitorios en los bordes de las piezas en movimiento y proteger la vida útil de los engranajes mecánicos del **Servo SG90**, se exige que el estado del color detectado sea persistente durante al menos $N=2$ ciclos de vector RGB completos antes de validar y ejecutar el cambio físico del actuador.
+2. **Aritmética de Desborde Protegida en `utils.c`:** El lazo cerrado de retrasos de microsegundos del DWT utiliza de forma estratégica la propiedad matemática del complemento a dos mediante la instrucción `while ((DWT->CYCCNT - start_cycles) < delay_cycles);`. Esto garantiza inmunidad total y cálculo correcto del tiempo transcurrido, incluso ante el desborde natural del registro físico contador de 32 bits.
+3. **Flujo de Ejecución Totalmente No Bloqueante:** Se eliminó de raíz el uso de la función `HAL_Delay()` de todo el mapa del firmware. Las tareas críticas de visión (MEF), la interpolación lineal de trayectoria del brazo robótico y el parpadeo de diagnóstico de CPU viva (**Heartbeat**) corren de forma independiente y asíncrona en la ronda del lazo principal.
 
 ---
 
-### Mapeo de Hardware: Nucleo-F439ZI
+## 🔩 Mapeo de Hardware: Nucleo-F439ZI
 
-La asignación de pines se ha realizado optimizando el uso de funciones alternativas para evitar conflictos con el programador ST-LINK y garantizar el acceso a canales de Timer con alta resolución.
+La asignación de pines se realizó optimizando el uso de las funciones alternativas nativas del mapa del silicio para garantizar operaciones directas por hardware y evitar conflictos de líneas.
 
-| Periférico | Pin | Función | Configuración Técnica |
+| Periférico | Pin | Función | Configuración Técnica / Nivel de Robustez |
 | :--- | :--- | :--- | :--- |
-| **TIM3** | **Interno** | **Maestro de Tiempo** | Genera interrupción cada 100ms para lectura isócrona. |
-| **TIM4_CH1** | **PB6** | **Entrada de Frecuencia** | Modo Esclavo (External Clock Mode 1) para conteo de pulsos. |
-| **TIM5_CH1** | **PA0** | **Control PWM Servo** | Salida de 32 bits para interpolación suave del brazo robótico. |
-| **TIM1_CH1/2/3** | **PE9/11/13** | **Interfaz RGB** | PWM de alta velocidad para retroalimentación visual. |
-| **GPIO Out** | **PC10 / PC11** | **Control de Filtros** | Manejo de pines **S2** y **S3** para multiplexado óptico. |
-| **GPIO Out** | **PG2 / PG3** | **Escalamiento/Habilitación** | Control de pines **S0** y **S1** (Frecuencia al 100%). |
-| **GPIO Out** | **PF13** | **Control LED Sensor** | Activa la iluminación frontal del TCS3200 para normalizar la lectura. |
-| **UART3** | **PD8 / PD9** | **Debug Log** | Transmisión serie a 115200 bps para telemetría. |
-| **GPIO Out** | **PB8** | **LED de Estado** | Indicador **Heartbeat** (LD3 - Rojo) de CPU viva. |
-
----
-
-## ⚠️ Lecciones Aprendidas: Integridad de Señal y Debounce
-
-Durante la fase de integración, se identificó una situación crítica con la detección del color **Cian**.
-
-* **Problema:** Debido a que el canal Azul y Verde del sensor TCS3200 tienen una respuesta espectral solapada, se producían "rebotes" lógicos entre el `ESTADO_AZUL` y el `ESTADO_CIAN` bajo ciertas condiciones de iluminación, provocando movimientos erráticos en el servomotor.
-* **Solución:** Se implementó un **Filtro de Estabilidad Temporal (Software Debounce)**. El sistema no actualiza la posición del brazo robótico hasta que el sensor confirma el mismo color durante $N$ ciclos de medición consecutivos ($N=2$). Esto garantiza la eliminación de ruidos transitorios y garantiza que el actuador solo responda a estados de color plenamente confirmados.
+| **Cortex-M4** | **Interno** | **DWT (Utils Driver)** | Registro `CYCCNT` activo para base de tiempo elástica de microsegundos. |
+| **TIM3** | **Interno** | **Maestro de Tiempo** | Genera interrupción periódica a 10 Hz ($100\text{ ms}$) para muestreo isócrono. |
+| **TIM4_CH1** | **PB6** | **Entrada de Frecuencia** | Modo Esclavo (`EXTERNAL1`) para conteo determinístico de pulsos ópticos. |
+| **TIM5_CH1** | **PA0** | **Control PWM Servo** | Resolución avanzada de 32 bits para interpolación lineal suave sin estrés mecánico. |
+| **TIM1_CH1/2/3**| **PE9/11/13**| **Interfaz RGB** | PWM de alta frecuencia para feedback visual libre de parpadeo (*flicker*). |
+| **GPIO Out** | **PC10 / PC11**| **Control de Filtros** | Conmutación abstracta por PAL de los pines **S2** y **S3** (Multiplexado). |
+| **GPIO Out** | **PG2 / PG3** | **Escala de Frecuencia**| Configuración estática por PAL para salida al 100% (**S0/S1 = H**). |
+| **GPIO Out** | **PF13** | **LED del Sensor** | Control del bloque emisor frontal para normalizar la reflectancia del material. |
+| **UART3** | **PD8 / PD9** | **Telemetría Debug** | Transmisión serial a 115200 bps para volcado y análisis de firmas ópticas. |
+| **GPIO Out** | **PB8** | **LED de Estado** | Indicador **Heartbeat** (LD3 - Rojo) de CPU viva independiente del sensor. |
 
 ---
 
 ## 🏁 Conclusión
 
-Este laboratorio consolida la importancia de la **delegación de tareas al hardware**. El uso correcto de los **Modos Esclavos (Slave Mode)** en los Timers permite que el microcontrolador digitalice intervalos temporales con precisión de microsegundos sin consumir ciclos de CPU en tareas de cronometría básica. 
+Este laboratorio consolida de forma empírica la enorme importancia de la **arquitectura de software orientada a capas y la delegación de control al hardware de bajo nivel**. Al estructurar el proyecto mediante una **PAL Universal**, el núcleo del driver del TCS3200 queda completamente blindado y protegido ante la obsolescencia técnica o cambios en el proveedor de silicio.
 
-La integración de técnicas de **histéresis dinámica** y **filtrado digital** demuestra que es posible transformar un sensor de bajo costo en un sistema de clasificación robusto de grado industrial, permitiendo al núcleo Cortex-M4 enfocarse en la lógica de control de trayectoria y la orquestación asíncrona de periféricos.
+Asimismo, la sustitución de la captura de períodos clásica por una ventana de integración basada en el **Modo Contador de Eventos Externos** por hardware demuestra que es posible lograr un procesamiento de señales de alta velocidad determinístico y robusto de grado industrial, permitiendo al procesador Cortex-M4 dedicarse con absoluta holgura a la orquestación asíncrona y lógica superior del sistema.
 
 ---
 
- *"Nivel Avanzado: Automatización por hardware y procesamiento de señales. El Modo Slave es la clave para la captura de eventos de alta frecuencia donde cada microsegundo cuenta para la precisión del dato final."*
+ *"Nivel Intermedio: Automatización por hardware y procesamiento de señales. El Modo Slave es la clave para la captura de eventos de alta frecuencia donde cada microsegundo cuenta para la precisión del dato final."*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

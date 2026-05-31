@@ -1,27 +1,41 @@
 # 06_TIM_PWM_Advance: Control de Posición, Interpolación de Velocidad y HMI Multimodal
 
-Este laboratorio documenta la implementación avanzada de señales **PWM (Pulse Width Modulation)** para el control de posición de un servomotor **SG90**. El proyecto integra una arquitectura orientada a eventos que combina el protocolo de comunicación PPM, el procesamiento de cuadratura mediante **EXTI**, y una interfaz HMI compuesta por un **LED RGB** (PWM) y un **Display 7 Segmentos** multiplexado, todo coordinado bajo la plataforma **Nucleo-F439ZI**.
+Este laboratorio documenta la implementación avanzada de señales **PWM (Pulse Width Modulation)** para el control de posición de un servomotor **SG90** y la decodificación por software de un encoder rotativo **KY-040**. Manteniendo el estándar de diseño multiplataforma del repositorio, ambos módulos operan de forma agnóstica a través de nuestra capa PAL (Platform Abstraction Layer), permitiendo que toda la lógica de control asíncrono e interpolación cinemática corra de forma idéntica en STM32, NXP o AVR.
 
 ## 🎯 Objetivos
-- **Dominar el Protocolo PPM:** Configurar Timers para generar señales de 50Hz con resolución de microsegundos para el control de servos analógicos.
-- **Implementar Interpolación de Velocidad:** Desarrollar un algoritmo de movimiento suave (Slew Rate Control) para evitar picos de corriente y estrés mecánico.
-- **Procesamiento de Cuadratura por EXTI:** Decodificar señales de un encoder rotativo (**KY-040**) mediante interrupciones externas para un control de usuario fluido.
-- **Gestión de HMI Dinámica:** Mapear variables físicas (ángulo) a variables visuales (color RGB y dígitos) de forma asíncrona.
+* **Dominar el Protocolo PPM:** Configurar los registros de comparación del Timer para emular señales PPM de 50Hz con resolución de microsegundos.
+* **Optimizar la Cinética del Actuador:** Implementar un algoritmo de interpolación de trayectoria (*Slew Rate Control*) para eliminar movimientos bruscos y picos de corriente.
+* **Decodificación Robusta por Software:** Desarrollar un manejador de interrupciones unificado para las señales en cuadratura del encoder, aislando el ruido mecánico.
+* **Sincronización de HMI Asíncrona:** Coordinar el lazo principal para actualizar dinámicamente un LED RGB y un display de 7 segmentos multiplexado según el ángulo actual.
+
+---
+
+## 🔌 Especificaciones de Circuito
+
+<center>
+<img src="./assets/hardware.png" width="1000">
+</center>
+
+
+*   **Servomotor:** Servo SG-90.
+*   **Encoder:**    Encoder KY-040
+*   **LED RGB:**    1 LED RGB Ánodo Común.
+*   **Display:**    4 Dígitos 7-Segmentos (Multiplexado).
 
 ---
 
 ## 🔩 Teoría de Operación: PWM de Posición vs. PWM de Potencia
 
-### 1. El Protocolo de Control de Servos (PPM)
-A diferencia de un PWM para un LED, donde el ciclo de trabajo varía de 0% a 100%, el servomotor SG90 utiliza el ancho del pulso como un **mensaje de posición**. 
+### 1. El Protocolo de Control del Servo SG90 (PPM)
+A diferencia de un PWM clásico para control de potencia (como el brillo del LED RGB), donde el ciclo de trabajo (*Duty Cycle*) varía de 0% a 100%, el servomotor analógico utiliza el ancho del pulso positivo como un **mensaje de posición**.
 
-* **Determinismo Temporal:** La señal debe ser estrictamente de **50 Hz** (20ms de periodo). Una desviación en esta frecuencia causa inestabilidad y vibraciones (jitter) en el actuador.
-* **Resolución de Ángulo:** El rango útil se limita a pulsos entre **0.5ms (0°)** y **2.5ms (180°)**. En este proyecto, se configuró el Timer para obtener una resolución de **1 μs por paso**, permitiendo un control sub-grado.
+* **Determinismo de Frecuencia:** La señal exige un período estricto de **20 ms (50 Hz)**. Desviaciones en esta base de tiempo desestabilizan el lazo analógico interno del servo, provocando vibraciones mecánicas (*jitter*), pérdida de torque y recalentamiento.
+* **Resolución Temporal:** El rango útil se confina estrictamente entre **0.5 ms (500 μs) para 0°** y **2.5 ms (2500 μs) para 180°**. Configurando el Timer para que obtenga una resolución de **1 μs por cuenta**, logramos un control de posición sub-grado de alta precisión.
 
-### 2. Interpolación y Control de Velocidad
-Para evitar que el servo intente alcanzar el ángulo objetivo de forma instantánea (causando golpes mecánicos), se implementó un driver que calcula pasos intermedios:
-* **Target vs. Current:** El sistema diferencia entre la posición deseada (marcada por el encoder) y la posición actual del eje.
-* **Update Rate:** En cada iteración del lazo principal, el ángulo actual se acerca al objetivo según una tasa de velocidad definida en grados por segundo.
+### 2. Algoritmo de Interpolación y Slew Rate
+Para evitar que el servo intente alcanzar un nuevo objetivo de forma instantánea—lo que generaría un estrés mecánico masivo en los engranajes y caídas de tensión en la línea de alimentación—, el driver procesa la trayectoria en el tiempo:
+* **Desacople de Objetivos:** El sistema separa la intención del usuario (`target_angle`) de la realidad cinemática (`current_angle`).
+* **Cálculo por Delta-Time ($dT$):** El método `Update` pollea de forma no bloqueante el tiempo transcurrido en milisegundos. El ángulo real avanza hacia la meta a una velocidad constante expresada en Grados por Segundo (DPS), garantizando transiciones suaves.
 
 ---
 
@@ -55,74 +69,128 @@ Genera una interrupción pura cada **2 ms** para el refresco del display de 7 se
 
 ---
 
-## 🏗️ Arquitectura de Software: Flujo de Datos y Concurrencia
+## 🏗️ Arquitectura de Software
 
-El sistema opera bajo un esquema de **Multitarea Cooperativa** y **Gestión por Interrupciones**, eliminando el uso de retardos bloqueantes (`HAL_Delay`). La arquitectura se divide en tres dominios que interactúan de forma asíncrona:
-
-1. **Dominio de Entrada (Eventos de Usuario):** El Encoder KY-040 genera interrupciones externas (**EXTI**) que son procesadas de inmediato. El software no "espera" al usuario; el hardware le avisa al procesador que la perilla se ha movido.
-   - **Captura:** El Callback de EXTI detecta el flanco y actualiza la posición lógica.
-   - **Acción de Reset:** Al presionar el switch del encoder, se dispara un evento que restablece el objetivo a 90°.
-
-2. **Dominio de Procesamiento (Lógica de Control):** En el lazo principal (`while(1)`), el sistema actúa como un **Sincronizador de Estados**:
-   - **Generación de Trayectoria:** El driver del servo calcula el siguiente paso basado en una velocidad de 150°/s (**Slew Rate**).
-   - **Filtro de Actualización:** El display y el log de UART solo se refrescan si el ángulo entero ha cambiado (`current_angle != last_angle`).
-
-3. **Dominio de Salida (Periféricos de Hardware):** El hardware gestiona las tareas de alta frecuencia mediante Timers:
-   - **PWM de Posición (TIM3):** Señal constante de 50Hz para el servo.
-   - **PWM Cromático (TIM4):** Mezcla de colores en el LED RGB según el ángulo.
-   - **Multiplexado (TIM2):** Refresco secuencial de los 3 dígitos cada 2ms.
-
----
-
-## 🔍 Análisis de Implementación: Puntos Críticos del `main.c`
-
-### 1. El Paradigma de "Control por Eventos" (EXTI vs Polling)
-El sistema optimiza los ciclos de CPU al no preguntar constantemente por el estado del encoder. 
-- **Prioridad NVIC:** Se asignó una prioridad estratégica al `EXTI9_5_IRQn` para que el conteo de pasos sea preferente frente a tareas cosméticas.
-- **Abstracción en Callback:** La lógica de decodificación se delega al `KY040_IRQ_Handler`, manteniendo el `main.c` limpio de lógica de bajo nivel.
-
-
-
-### 2. Sincronización de Dominios: Encoder vs. Servo
-Se implementa un **desacople de objetivos** para evitar movimientos bruscos que dañarían la mecánica:
-- El **Encoder** define el `target_from_encoder` (intención del usuario).
-- El **Driver del Servo** gestiona la `current_angle` (realidad física).
-- **Interpolación Lineal:** La función `SERVO_SG90_SetSpeedAngle` permite que el servo "viaje" hacia el objetivo suavemente, imitando el comportamiento de sistemas industriales.
-
-### 3. Máquina de Estados para Feedback Visual
-Para optimizar el bus de datos y reducir el ruido electromagnético, la función `UI_Update_Feedback` utiliza una **guarda de estado**:
-
-```c
-if (current_led_state != last_led_state) {
-    // Solo se actualiza el PWM del LED si el estado de color realmente cambió.
-    // Esto evita re-escrituras innecesarias en los registros CCR del Timer.
-}
-```
-
-### 4. Multiplexado de Display por Interrupción de Hardware
-
-El refresco del display de 7 segmentos está orquestado por el **TIM2**, garantizando una **Persistencia de Visión** perfecta.
-
-* **Refresco Asíncrono:** La función `Display7Seg_Refresh_ISR` se ejecuta en el background cada 2ms.
-* **Determinismo:** Los números se mantienen estables y brillantes sin importar la carga de procesamiento o la latencia de los logs UART en el lazo principal.
-
----
-
-## 🔄 Diagrama de Flujo del Sistema
+El firmware se estructura bajo el modelo de **3 Capas independientes**, utilizando la inyección de dependencias de nuestra PAL universal para desacoplar el núcleo lógico del silicio del fabricante.
 
 ```mermaid
 graph TD
-    A[Encoder KY-040] -- EXTI Interrupción --> B(Actualizar Target Angle)
-    B --> C{Lazo Principal}
-    C --> D[Driver Servo: Interpolación de Velocidad]
-    D -- PWM TIM3 --> E[Actuador: Servo SG90]
-    D --> F{¿Cambió el Ángulo?}
-    F -- SI --> G[Actualizar Display 7-Seg]
-    F -- SI --> H[Actualizar Color LED RGB]
-    F -- SI --> I[Log por UART3]
-    F -- NO --> C
-    J[TIM2 Interrupción] -- Cada 2ms --> K[Refresco Físico Display]
+    %% Capa 3: Aplicación
+    subgraph Capa_3 [Capa 3: Aplicación]
+        A[main.c] -->|Lógica Cooperativa| B[UI_Update_Feedback]
+    end
+
+    %% Capa 2: Abstracción y Drivers
+    subgraph Capa_2 [Capa 2: Drivers de Dispositivos]
+        C[servo_sg90.c]
+        D[encoder_ky040.c]
+    end
+
+    %% Capa 1: Hardware Mapping & PAL
+    subgraph Capa_1 [Capa 1: Hardware & Capa PAL]
+        E[hal_interface_t]
+        F[Adaptadores STM32 HAL / Registros]
+    end
+
+    %% Flujos y Vinculaciones
+    A -->|Inyecta Servicios| E
+    E -->|Consumo Agnóstico| C
+    E -->|Consumo Agnóstico| D
+    F -.->|Implementa Contrato| E
+    A -->|Pollea e Invocas ISR| D
+    A -->|Actualiza Perfiles| C
 ```
+
+### Detalle Capa 1: Hardware Mapping & Adaptadores
+Nivel inferior que asocia los periféricos físicos de la placa con el contrato abstracto. Se encarga de implementar funciones mínimas de lectura/escritura digital y escrituras en registros de comparación de los Timers (`__HAL_TIM_SET_COMPARE`).
+
+### Detalle Capa 2: Core de los Drivers (Servo & Encoder)
+Este nivel procesa la física intrínseca de los componentes. El código está completamente limpio de palabras clave de STM32, operando mediante abstracción.
+
+#### Lógica del Control de Trayectoria Suave (`servo_sg90.c`):
+```c
+void SERVO_SG90_Update(Servo_t *servo) {
+    if (servo == NULL || servo->pal.get_tick == NULL || servo->pal.pwm_write == NULL) return;
+    if (servo->step_per_tick == 0.0f || (int)servo->current_angle == servo->target_angle) return;
+
+    uint32_t now = servo->pal.get_tick();
+    uint32_t delta = now - servo->last_time_ms;
+
+    if (delta > 0) {
+        servo->last_time_ms = now;
+        float move = servo->step_per_tick * (float)delta;
+
+        /* Aproximación lineal controlada hacia la meta */
+        if (servo->current_angle < (float)servo->target_angle) {
+            servo->current_angle += move;
+            if (servo->current_angle > (float)servo->target_angle)
+                servo->current_angle = (float)servo->target_angle;
+        } else {
+            servo->current_angle -= move;
+            if (servo->current_angle < (float)servo->target_angle)
+                servo->current_angle = (float)servo->target_angle;
+        }
+
+        /* Impacto directo al PWM a través de la PAL */
+        uint32_t ccr_val = map_angle_to_ccr(servo, servo->current_angle);
+        servo->pal.pwm_write(servo->pwm_chan, (uint16_t)ccr_val);
+    }
+}
+```
+
+#### Decodificación Unificada de Cuadratura por Software (`encoder_ky040.c`):
+```c
+void KY040_IRQ_Handler(KY040_t *dev, generic_gpio_t triggered_gpio) {
+    if (dev == NULL || dev->pal.get_tick == NULL || dev->pal.gpio_read == NULL) return;
+    uint32_t ahora = dev->pal.get_tick();
+
+    /* --- FILTRADO Y PROCESAMIENTO DEL CANAL CLK --- */
+    if (triggered_gpio.port == dev->pin_A.port && triggered_gpio.pin == dev->pin_A.pin) {
+        if (ahora - dev->last_tick < 5) return; /* Filtro anti-rebote de cuadratura */
+
+        bool estadoA = dev->pal.gpio_read(dev->pin_A);
+        bool estadoB = dev->pal.gpio_read(dev->pin_B);
+
+        /* Algoritmo de detección por flanco de bajada */
+        if (dev->lastStateA == 1 && estadoA == false) {
+            if (estadoB != estadoA) {
+                dev->position++; /* Sentido Horario (CW) */
+            } else {
+                dev->position--; /* Sentido Antihorario (CCW) */
+            }
+            /* Saturación de límites */
+            if (dev->position > dev->max_val) dev->position = dev->max_val;
+            if (dev->position < dev->min_val) dev->position = dev->min_val;
+            dev->last_tick = ahora;
+        }
+        dev->lastStateA = estadoA ? 1 : 0;
+    }
+}
+```
+
+### Detalle Capa 3: Lógica de Aplicación
+El bloque de alto nivel en `main.c` ejecuta la orquestación cooperativa no bloqueante: sincroniza la posición del encoder hacia la meta del servo, despacha las tramas de depuración por UART y coordina el feedback visual (colores del LED RGB y visualización en el display multiplexado de 7 segmentos).
+
+---
+
+## 🛠️ Detalles de Robustez y Tolerancia a Fallos
+
+* **Inmunidad al Ruido en Señales de Fase (CLK):** Las transiciones mecánicas de un encoder económico generan rebotes transitorios dañinos. El driver aplica un bloqueo de tiempo síncrono de **5 ms** en el canal CLK, ignorando ruidos térmicos y lecturas espurias en la ISR.
+* **Debouncing de Transición en el Pulsador (SW):** El switch del encoder posee una guarda asíncrona por software de **200 ms**. El evento se convalida únicamente si, tras expirar la ventana de tiempo, el lector digital confirma que el pin continúa en estado bajo estable (Active Low con Pull-Up).
+* **Protección Cinemática por Clamping:** El driver del servo implementa restricciones numéricas estrictas de acotamiento en punto flotante, asegurando que ante cualquier desborde o anomalía del encoder, las cuentas de PWM se confinen al rango calibrado seguro de 0° a 180°, tunneling o anulando el riesgo de rotura de los topes mecánicos del reductor.
+
+---
+
+## 🏗️ Orquestación de Hardware: Triple Timer Workflow
+
+El sistema delega las subtareas cíclicas y de alta frecuencia a periféricos independientes de hardware, liberando ciclos de ejecución en el núcleo de procesamiento:
+
+| Periférico | Función Técnica | Configuración de Reloj / Registros | Justificación de Ingeniería |
+| :--- | :--- | :--- | :--- |
+| **TIM3** | Generador de Posición (PPM) | Prescaler = 89, Período (ARR) = 19999 | Setea la base exacta de **20ms (50Hz)** requerida por el SG90, logrando un paso de cuenta equivalente a **1 μs**. |
+| **TIM4** | Feedback Cromático (LED RGB) | Prescaler = 179, Período (ARR) = 999 | Modulación PWM a **1 kHz** para una mezcla de color fluida y libre de parpadeo perceptivo (*flicker*). |
+| **TIM2** | Multiplexado del Display | Prescaler = 89, Período (ARR) = 1999 | Genera una interrupción determinística cada **2 ms** para el barrido secuencial de los dígitos, blindando el brillo contra retardos del lazo principal. |
+
 ---
 
 ## 🗺️ Mapeo de Hardware y Configuración de Pines
@@ -131,7 +199,7 @@ La asignación de recursos se ha diseñado para evitar conflictos entre los cana
 
 | Periférico | Pin | Etiqueta | Función / Justificación Técnica |
 | :--- | :--- | :--- | :--- |
-| **TIM3_CH2** | **PB5** | `SERVO_PWM` | **Control de Posición:** Salida PWM con resolución de 1μs. |
+| **TIM3_CH2** | **PA7** | `SERVO_PWM` | **Control de Posición:** Salida PWM con resolución de 1μs. |
 | **TIM4_CH2-4**| **PD13-15** | `RGB_R/G/B` | **HMI Cromática:** Control de LED RGB mediante PWM de 1kHz. |
 | **EXTI 9_5**  |   **PB9** | `ENC_SW`  |   **Switch Encoder:** Resetea el Servo a 90 grados.    |
 | **EXTI 9_5** | **PB8** | `ENC_CLK` | **Reloj Encoder:** Dispara la IT para el conteo de pasos. |
@@ -153,3 +221,6 @@ El **Laboratorio 06** demuestra la versatilidad del periférico Timer para ir m�
 ---
 
 *"Nivel Intermedio: Superar los retardos por software es el primer paso hacia la ingeniería; aquí el PWM deja de ser una señal de potencia para ser un protocolo de control determinístico."*
+
+🛠️ **Carlos** | Estudiante de Ing. Electrónica @UTN_FRT.  
+🚀 Apasionado Autodidacta por los Sistemas Embebidos.

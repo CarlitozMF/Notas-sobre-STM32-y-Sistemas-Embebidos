@@ -79,9 +79,9 @@ Estandarización del diálogo con el mundo exterior mediante protocolos industri
 En esta etapa, los proyectos migran hacia un esquema de **Arquitectura Orientada a Eventos**, escalando en complejidad y robustez según los requerimientos del sistema:
 
 * **Jerarquía de Control de Estados (de menor a mayor complejidad):**
-    1. **FSM Básica (Switch-Case):** Implementación de Máquinas de Estados Finitos dentro del bucle principal para gestionar lógica secuencial simple.
+    1. **MEF Básica (Switch-Case):** Implementación de Máquinas de Estados Finitos dentro del bucle principal para gestionar lógica secuencial simple.
     2. **MEF No Bloqueante:** Integración de estados con temporización basada en `Systick` o Timers, eliminando esperas activas.
-    3. **FSM Dirigida por Eventos (Event-Driven):** Los cambios de estado no se consultan activamente, sino que son disparados exclusivamente por interrupciones (EXTI, Timer-IT), minimizando el consumo de energía.
+    3. **MEF Dirigida por Eventos (Event-Driven):** Los cambios de estado no se consultan activamente, sino que son disparados exclusivamente por interrupciones (EXTI, Timer-IT), minimizando el consumo de energía.
     4. **Máquinas de Estados Jerárquicas:** Estructuras donde un estado puede contener sub-estados, ideal para sistemas con menús complejos o múltiples modos de operación.
 
 * **Estado Volátil y Secciones Críticas:** Uso estricto del calificador `volatile` para variables compartidas entre el flujo principal y las ISR. Implementación de barreras de acceso para garantizar la **atomicidad** de los datos y evitar condiciones de carrera.

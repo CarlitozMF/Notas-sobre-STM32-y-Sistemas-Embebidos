@@ -63,6 +63,8 @@ void Error_Handler(void);
 #define USER_Btn_GPIO_Port GPIOC
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
+#define SERVO_PWM_Pin GPIO_PIN_0
+#define SERVO_PWM_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
 #define TCS_LED_Pin GPIO_PIN_13
@@ -95,6 +97,8 @@ void Error_Handler(void);
 #define TCS_S2_GPIO_Port GPIOC
 #define TCS_S3_Pin GPIO_PIN_11
 #define TCS_S3_GPIO_Port GPIOC
+#define TCS_OUT_Pin GPIO_PIN_6
+#define TCS_OUT_GPIO_Port GPIOB
 #define LD2_Pin GPIO_PIN_7
 #define LD2_GPIO_Port GPIOB
 #define usr_ledRojo_Pin GPIO_PIN_8

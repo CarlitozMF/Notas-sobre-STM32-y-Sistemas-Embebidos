@@ -269,7 +269,7 @@ int main(void)
 	HAL_Delay(1000);
 	Debug_Log("[OK] Driver 7 Segmentos: Objeto Inicializado con PAL\r\n");
 
-	// *********************** CONFIGURACION DEL LED RGB SOBERANO ***********************
+	// *********************** CONFIGURACION DEL LED RGB ***********************
 	// 1. Descriptores genéricos de canales PWM
 	generic_pwm_t ch_r = { .timer_handle = &htim4, .channel = TIM_CHANNEL_2 };
 	generic_pwm_t ch_g = { .timer_handle = &htim4, .channel = TIM_CHANNEL_3 };
@@ -281,7 +281,7 @@ int main(void)
 			.get_tick  = PAL_STM32_GetTick
 	};
 
-	// 3. Inicialización del objeto agnóstico (Curva Gamma incorporada)
+	// 3. Inicialización del objeto
 	RGB_LED_Init(&ledRGB, ch_r, ch_g, ch_b, RGB_ANODE_COMMON, 500, led_pal);
 	RGB_LED_SetColor(&ledRGB, 1000, 0, 0); // Estado inicial rojo estático (STOP)
 	Debug_Log("[OK] Driver LED RGB: Inicializado con PAL Universal\r\n");

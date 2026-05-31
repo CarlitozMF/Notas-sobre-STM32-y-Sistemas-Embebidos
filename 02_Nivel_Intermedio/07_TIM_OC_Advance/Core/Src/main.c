@@ -21,8 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
-#include "buzzer_oc.h"
+#include "tone_generator.h"
 #include "siren_service.h"
 
 /* USER CODE END Includes */
@@ -50,7 +49,9 @@ UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 
-Buzzer_t my_buzzer;
+tone_gen_t      my_buzzer;
+siren_service_t vehicular_siren;
+
 SirenMode_t actual_mode = MODE_OFF;
 volatile uint8_t button_event = 0;
 
@@ -64,10 +65,48 @@ static void MX_TIM5_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
+void     PAL_STM32_GPIO_Write(generic_gpio_t gpio, bool state);
+bool     PAL_STM32_GPIO_Read(generic_gpio_t gpio);
+void     PAL_STM32_PWM_Write(generic_pwm_t ch, uint16_t value);
+uint32_t PAL_STM32_GetTick(void);
+uint32_t PAL_STM32_OC_Read(generic_pwm_t ch);
+void     PAL_STM32_OC_Write(generic_pwm_t ch, uint32_t value);
+uint32_t PAL_STM32_GetTimerCnt(generic_pwm_t ch);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void PAL_STM32_GPIO_Write(generic_gpio_t gpio, bool state) {
+	HAL_GPIO_WritePin((GPIO_TypeDef*)gpio.port, gpio.pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+bool PAL_STM32_GPIO_Read(generic_gpio_t gpio) {
+	return (HAL_GPIO_ReadPin((GPIO_TypeDef*)gpio.port, gpio.pin) == GPIO_PIN_SET);
+}
+
+void PAL_STM32_PWM_Write(generic_pwm_t ch, uint16_t value) {
+	__HAL_TIM_SET_COMPARE((TIM_HandleTypeDef*)ch.timer_handle, ch.channel, value);
+}
+
+uint32_t PAL_STM32_GetTick(void) {
+	return HAL_GetTick();
+}
+
+uint32_t PAL_STM32_OC_Read(generic_pwm_t ch) {
+	// Lectura directa y limpia del registro CCRx asignado
+	return HAL_TIM_ReadCapturedValue((TIM_HandleTypeDef*)ch.timer_handle, ch.channel);
+}
+
+void PAL_STM32_OC_Write(generic_pwm_t ch, uint32_t value) {
+	// __HAL_TIM_SET_COMPARE escribe el nuevo valor elástico de disparo en el CCRx
+	__HAL_TIM_SET_COMPARE((TIM_HandleTypeDef*)ch.timer_handle, ch.channel, value);
+}
+
+uint32_t PAL_STM32_GetTimerCnt(generic_pwm_t ch) {
+	return __HAL_TIM_GET_COUNTER((TIM_HandleTypeDef*)ch.timer_handle);
+}
 
 /* USER CODE END 0 */
 
@@ -104,15 +143,41 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-	// 1. Habilitar Interrupciones en el NVIC (Imprescindible para el Buzzer)
+
+	// 1. Habilitar Interrupciones en el NVIC (Imprescindible para el Output Compare)
 	HAL_NVIC_SetPriority(TIM5_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM5_IRQn);
 
-	// 2. Inicializar el Driver del Buzzer (TIM5 en APB1 @ 90MHz)
-	Buzzer_Init(&my_buzzer, &htim5, TIM_CHANNEL_1, 90000000);
+	// 2. Configurar Tabla de Despacho PAL Universal
+	hal_interface_t sys_pal = {
+			.gpio_write    = PAL_STM32_GPIO_Write,
+			.gpio_read     = PAL_STM32_GPIO_Read,
+			.pwm_write     = PAL_STM32_PWM_Write,
+			.get_tick      = PAL_STM32_GetTick,
+			.oc_read       = PAL_STM32_OC_Read,
+			.oc_write      = PAL_STM32_OC_Write,
+			.get_timer_cnt = PAL_STM32_GetTimerCnt // <-- INYECTAMOS EL NUEVO MAPEO
+	};
 
-	// 3. Inicializar el Servicio de Sirena (Vincula Buzzer + LEDs en TIM4)
-	Siren_Init(&my_buzzer, &htim4);
+	// 3. Mapeo de Descriptores de Hardware Físicos
+	generic_pwm_t  oc_channel = { .timer_handle = &htim5, .channel = TIM_CHANNEL_1 };
+	generic_gpio_t buzzer_pin = { .port = buzzer_pin_GPIO_Port, .pin = buzzer_pin_Pin };
+	generic_pwm_t  led_izq    = { .timer_handle = &htim4, .channel = TIM_CHANNEL_1 };
+	generic_pwm_t  led_der    = { .timer_handle = &htim4, .channel = TIM_CHANNEL_2 };
+
+	// 4. Inicialización en Cadena Inyectando la PAL
+	TONE_GENERATOR_Init(&my_buzzer, oc_channel, buzzer_pin, sys_pal, 1000000);
+	SIREN_SERVICE_Init(&vehicular_siren, &my_buzzer, led_izq, led_der, sys_pal);
+
+	// 5. CORRECCIÓN CRÍTICA: Establecer primero el modo operativo lógicamente
+	// Esto limpia los flags de estado del driver genérico antes del latido del hardware
+	SIREN_SERVICE_SetMode(&vehicular_siren, actual_mode);
+	__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC1);
+	// 6. Encendido físico del periférico del silicio (Siempre al final)
+	HAL_TIM_OC_Start_IT(&htim5, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,42 +188,74 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+		static uint32_t button_press_tick = 0;
+		static uint8_t button_state = 0;             // 0: Reposo, 1: Validando tiempo, 2: Ráfaga HORN activa
+		static SirenMode_t modo_guardado = MODE_OFF; // Almacén dinámico para el retorno atómico
 
-		static uint32_t last_debounce_tick = 0;
-		static uint8_t button_stable_state = 1; // 1 es no presionado (Pull-up)
+		// 1. Captura instantánea de la Capa 1 (Lectura directa del pin PB11)
+		uint8_t pin_ahora = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11);
 
-		// 1. Si hubo un evento de interrupción, empezamos a medir
-		if (button_event)
+		// 2. Máquina de estados para discriminar Click de Hold (Pulsación sostenida)
+		switch (button_state)
 		{
-			uint32_t current_tick = HAL_GetTick();
-
-			// 2. Esperamos que el estado sea estable por 50ms sin usar delay
-			if (current_tick - last_debounce_tick > 50)
+		case 0: // [ESTADO: REPOSO] Esperando que la ISR avise el flanco de bajada (Falling)
+			if (button_event)
 			{
-				uint8_t current_pin_state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11);
+				button_event = 0;              // Consumimos el evento asíncrono
+				button_press_tick = HAL_GetTick(); // Capturamos la estampa de tiempo inicial
+				button_state = 1;              // Transicionamos a evaluar la duración del pulso
+			}
+			break;
 
-				// 3. Si el estado cambió y es estable en LOW (presionado)
-				if (current_pin_state == GPIO_PIN_RESET && button_stable_state == 1)
+		case 1: // [ESTADO: EVALUANDO DURACIÓN] El usuario tiene el dedo sobre el pulsador
+			if (pin_ahora == GPIO_PIN_RESET)
+			{
+				// CONDICIÓN HOLD: Si pasa más de 400ms retenido, se dispara la bocina de aire manual
+				if (HAL_GetTick() - button_press_tick > 400)
+				{
+					modo_guardado = actual_mode; // Guardamos el modo actual (ej: MODE_YELP) para no perder el contexto
+					actual_mode = MODE_HORN;
+					SIREN_SERVICE_SetMode(&vehicular_siren, actual_mode); // Clava los 420 Hz físicos
+					button_state = 2; // Bloqueamos la máquina en estado de retención
+				}
+			}
+			else // El usuario soltó el botón ANTES de llegar a los 400ms -> Es un click corto
+			{
+				// Antirebote mínimo de seguridad: Confirmamos si el click duró al menos 50ms
+				if (HAL_GetTick() - button_press_tick > 50)
 				{
 					actual_mode++;
-					if (actual_mode > MODE_HI_LO) actual_mode = MODE_OFF;
-
-					Siren_SetMode(actual_mode);
-					button_stable_state = 0; // Marcamos como presionado
+					// Excluimos el MODE_HORN del ciclo secuencial automático
+					if (actual_mode >= MODE_HORN) {
+						actual_mode = MODE_OFF;
+					}
+					SIREN_SERVICE_SetMode(&vehicular_siren, actual_mode);
 				}
-				// 4. Si el botón se soltó
-				else if (current_pin_state == GPIO_PIN_SET)
-				{
-					button_stable_state = 1;
-					button_event = 0; // Limpiamos el evento recién cuando se suelta
-				}
-
-				last_debounce_tick = current_tick;
+				button_state = 0; // Reseteamos la máquina al reposo
 			}
+			break;
+
+		case 2: // [ESTADO: RETENCIÓN HORN] La bocina ruge en background mientras el pin siga en LOW
+			if (pin_ahora == GPIO_PIN_SET) // El usuario quitó el dedo del pulsador (Flanco de subida)
+			{
+				// RESTAURACIÓN ATÓMICA: Volvemos de inmediato a la sirena que estaba corriendo antes
+				actual_mode = modo_guardado;
+				SIREN_SERVICE_SetMode(&vehicular_siren, actual_mode);
+
+				// Limpieza preventiva de flags por ruidos mecánicos al soltar el resorte del botón
+				button_event = 0;
+				button_state = 0;
+			}
+			break;
+
+		default:
+			button_state = 0;
+			break;
 		}
 
-		// Siempre actualizamos la sirena y luces
-		Siren_Update();
+		// 3. Despacho asíncrono cooperativo: ejecuta las rampas de audio y multiplexado de balizas
+		SIREN_SERVICE_Update(&vehicular_siren);
+
 	}
   /* USER CODE END 3 */
 }
@@ -333,6 +430,7 @@ static void MX_TIM5_Init(void)
   /* USER CODE BEGIN TIM5_Init 2 */
 
   /* USER CODE END TIM5_Init 2 */
+  HAL_TIM_MspPostInit(&htim5);
 
 }
 
@@ -390,9 +488,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LD1_Pin|LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -403,13 +498,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USER_Btn_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
   GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
@@ -452,19 +540,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == GPIO_PIN_11)
 	{
-		button_event = 1; // Avisamos que hubo un flanco
+		button_event = 1;
 	}
 }
 
 /**
- * @brief Callback de la HAL cuando el Timer alcanza el valor del CCR
+ * @brief Callback universal de comparación de canales de la HAL de ST.
+ * @details Se ejecuta de manera directa al levantar el flag CC1, saltándose
+ * cualquier filtro intermedio de la capa Base u OC.
  */
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance == TIM5)
 	{
-		// Llamada al manejador del driver encapsulado
-		Buzzer_IRQ_Handler(&my_buzzer);
+		HAL_GPIO_TogglePin(GPIOB, LD1_Pin); // Testigo visual
+		TONE_GENERATOR_IRQ_Handler(&my_buzzer);
 	}
 }
 

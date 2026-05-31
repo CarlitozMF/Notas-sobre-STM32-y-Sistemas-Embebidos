@@ -21,8 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "rgb_driver.h"
-#include "Display_7Seg_stm32.h"
+#include "rgb_led.h"
+#include "Display_7Seg.h"
 #include "encoder_ky040.h"
 #include "servo_sg90.h"
 #include "stdio.h"
@@ -64,11 +64,11 @@ UART_HandleTypeDef huart3;
 LED_State_t last_led_state = ST_NONE;
 LED_State_t current_led_state = ST_NONE;
 /* --- Objeto para el Led RGB --- */
-RGB_LED_t ledRGB;
+rgb_led_t ledRGB;
 
 /* --- Objeto para los display de 7 segmentos --- */
 display_7seg_t Display;
-uint8_t bufferDisplay[3]; //buffer para la cantidad de displays
+uint8_t bufferDisplay[4]; //buffer para la cantidad de displays
 
 /* --- Objeto para el Servo SG90 --- */
 Servo_t servo_main;
@@ -94,7 +94,15 @@ static void MX_TIM4_Init(void);
 /* --- Prototipos de Funciones Auxiliares --- */
 void Debug_Log(const char *msg);
 void UI_Update_Feedback(int32_t angle);
+/* --- Prototipos de Funciones Adaptadoras (Capa de Acoplamiento / PAL) --- */
+void	 PAL_STM32_GPIO_Write(generic_gpio_t gpio, bool state);
+bool     PAL_STM32_GPIO_Read(generic_gpio_t gpio);
+void     PAL_STM32_PWM_Write(generic_pwm_t ch, uint16_t value);
+uint32_t PAL_STM32_GetTick(void);
 
+void     PAL_Display_WritePin(display_gpio_t pin, bool state);
+bool     PAL_Display_ReadPin(display_gpio_t pin);
+uint32_t PAL_Display_GetTick(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -123,15 +131,53 @@ void UI_Update_Feedback(int32_t angle) {
 		last_led_state = current_led_state;
 
 		switch (current_led_state) {
-		case ST_RED:     RGB_Set_Preset(&ledRGB, COLOR_RED);     break;
-		case ST_YELLOW:  RGB_Set_Preset(&ledRGB, COLOR_YELLOW);  break;
-		case ST_MAGENTA: RGB_Set_Preset(&ledRGB, COLOR_MAGENTA); break;
-		case ST_GREEN:   RGB_Set_Preset(&ledRGB, COLOR_GREEN);   break;
-		case ST_BLUE:    RGB_Set_Preset(&ledRGB, COLOR_BLUE);    break;
-		default:         RGB_Set_Preset(&ledRGB, COLOR_OFF);     break;
+		case ST_RED:     RGB_LED_SetColor(&ledRGB, 1000, 0, 0);     break;
+		case ST_YELLOW:  RGB_LED_SetColor(&ledRGB, 1000, 1000, 0);  break;
+		case ST_MAGENTA: RGB_LED_SetColor(&ledRGB, 1000, 0, 1000); break;
+		case ST_GREEN:   RGB_LED_SetColor(&ledRGB, 0, 1000, 0);   break;
+		case ST_BLUE:    RGB_LED_SetColor(&ledRGB, 0, 0, 1000);    break;
+		default:         RGB_LED_SetColor(&ledRGB, 0, 0, 0);     break;
 		}
 	}
 }
+
+/* ========================================================================== */
+/* ---- IMPLEMENTACIÓN DE ADAPTADORES DE HARDWARE (CONTRATOS PAL) ----------- */
+/* ========================================================================== */
+
+/* --- Adaptadores para PAL Universal --- */
+
+void PAL_STM32_GPIO_Write(generic_gpio_t gpio, bool state) {
+	HAL_GPIO_WritePin((GPIO_TypeDef*)gpio.port, gpio.pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+bool PAL_STM32_GPIO_Read(generic_gpio_t gpio) {
+	return (HAL_GPIO_ReadPin((GPIO_TypeDef*)gpio.port, gpio.pin) == GPIO_PIN_SET);
+}
+
+void PAL_STM32_PWM_Write(generic_pwm_t ch, uint16_t value) {
+	__HAL_TIM_SET_COMPARE((TIM_HandleTypeDef*)ch.timer_handle, ch.channel, value);
+}
+
+uint32_t PAL_STM32_GetTick(void) {
+	return HAL_GetTick();
+}
+
+
+/* --- Adaptadores para PAL del Display de 7 Segmentos --- */
+void PAL_Display_WritePin(display_gpio_t pin, bool state) {
+	HAL_GPIO_WritePin((GPIO_TypeDef*)pin.port, pin.pin, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+bool PAL_Display_ReadPin(display_gpio_t pin) {
+	return (HAL_GPIO_ReadPin((GPIO_TypeDef*)pin.port, pin.pin) == GPIO_PIN_SET);
+}
+
+uint32_t PAL_Display_GetTick(void) {
+	return HAL_GetTick();
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -178,56 +224,88 @@ int main(void)
 	Debug_Log("[OK] Nucleo Clock: 180 MHz\r\n");
 	Debug_Log(">>> Iniciando Perifericos...\r\n");
 
-	// *********************** Configuración del Servo SG90 ***********************
-	// Inicializamos con los valores de pulso validados: 520 (0°) a 2540 (180°)
-	SERVO_SG90_Init(&servo_main, &htim3, TIM_CHANNEL_2, 520, 2540);
+	// ==========================================================================
+	// 0. CONFIGURACIÓN DE LA PAL UNIVERSAL COMPARTIDA
+	// ==========================================================================
+	hal_interface_t sys_pal = {
+			.pwm_write = PAL_STM32_PWM_Write,
+			.gpio_read = PAL_STM32_GPIO_Read,
+			.get_tick  = PAL_STM32_GetTick
+	};
+
+	// ==========================================================================
+	// 1. CONFIGURACIÓN DEL SERVO SG90
+	// ==========================================================================
+	// Descriptor del canal PWM para el Servo (TIM3 Canal 2)
+	generic_pwm_t servo_pwm = { .timer_handle = &htim3, .channel = TIM_CHANNEL_2 };
+
+	// Inicialización con inyección de la PAL Universal
+	SERVO_SG90_Init(&servo_main, servo_pwm, sys_pal, 520, 2540);
+
+	/* Iniciar hardware del Timer (Específico de la capa de acoplamiento ST) */
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
 	Debug_Log("[OK] Periferico TIM3: PWM Servo Listo (Canal 2)\r\n");
 
-	// ***********************Configuracion de los Display 7 Segmentos********************
-	// Configuración de Pines del Display (Usando Labels del .ioc)
-	static display_pio_t segmentos[] = {
+
+	// ==========================================================================
+	// 2. CONFIGURACION DEL DISPLAY DE 7 SEGMENTOS
+	// ==========================================================================
+	static display_gpio_t segmentos[] = {
 			{SEG_A_GPIO_Port, SEG_A_Pin}, {SEG_B_GPIO_Port, SEG_B_Pin},
 			{SEG_C_GPIO_Port, SEG_C_Pin}, {SEG_D_GPIO_Port, SEG_D_Pin},
 			{SEG_E_GPIO_Port, SEG_E_Pin}, {SEG_F_GPIO_Port, SEG_F_Pin},
 			{SEG_G_GPIO_Port, SEG_G_Pin}
 	};
-	static display_pio_t comunes[] = {
-			{EN1_GPIO_Port, EN1_Pin},
-			{EN2_GPIO_Port, EN2_Pin},
-			{EN3_GPIO_Port, EN3_Pin}
+	static display_gpio_t comunes[] = {
+			{EN4_GPIO_Port, EN4_Pin}, {EN3_GPIO_Port, EN3_Pin},
+			{EN2_GPIO_Port, EN2_Pin}, {EN1_GPIO_Port, EN1_Pin}
 	};
 
-	//Iniciar Driver
-	Display7Seg_Init(&Display, &htim2, segmentos, comunes, 3, bufferDisplay);
+	display_7seg_pal_t display_pal = {
+			.write_pin = PAL_Display_WritePin,
+			.read_pin  = PAL_Display_ReadPin,
+			.get_tick  = PAL_Display_GetTick
+	};
+
+	Display7Seg_Init(&Display, display_pal, segmentos, comunes, 4, bufferDisplay, DISPLAY_CATHODE);
 	HAL_TIM_Base_Start_IT(&htim2);
-	Display7Seg_WriteString(&Display, "HI ");
+
+	Display7Seg_SetBrightness(&Display, 80);
+	Display7Seg_WriteString(&Display, "HOLA");
+	HAL_Delay(1000);
 	Debug_Log("[OK] Periferico TIM2: Multiplexado Display\r\n");
 
-	//***********************Configuracion del LED RGB Anodo Comun***********************
-	// 1. Empaquetamos la configuración de hardware
-	RGB_Config_t configRGB = {
-			.htim = &htim4,						//Timer utilizado para el led RGB
-			.R_channel = TIM_CHANNEL_2,			//RGB_R pin
-			.G_channel = TIM_CHANNEL_3,			//RGB_G pin
-			.B_channel = TIM_CHANNEL_4,			//RGB_B pin
-			.led_type = LED_TYPE_ANODE_COMMON,	//Tipo de RGB -Cambiar si es catodo comun-
-			.max_brightness = 500				//Brillo 0-1000
-	};
-	// 2. Inicializamos el driver con el paquete
-	RGB_Init_Single(&ledRGB, &configRGB);
+	// ==========================================================================
+	// 3. CONFIGURACION DEL LED RGB
+	// ==========================================================================
+	generic_pwm_t ch_r = { .timer_handle = &htim4, .channel = TIM_CHANNEL_2 };
+	generic_pwm_t ch_g = { .timer_handle = &htim4, .channel = TIM_CHANNEL_3 };
+	generic_pwm_t ch_b = { .timer_handle = &htim4, .channel = TIM_CHANNEL_4 };
+
+	// Inyectamos la misma PAL Universal compartida
+	RGB_LED_Init(&ledRGB, ch_r, ch_g, ch_b, RGB_ANODE_COMMON, 500, sys_pal);
+	RGB_LED_SetColor(&ledRGB, 1000, 0, 0);
+
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
 	Debug_Log("[OK] Periferico TIM4: PWM RGB Activo\r\n");
 
-	// *********************** Configuración del Encoder KY-040 *******************
-	// Rango de 0 a 180 para coincidir con el servo
-	KY040_Init(&encoder_ctrl, ENC_CLK_GPIO_Port, ENC_CLK_Pin,
-			ENC_DT_GPIO_Port, ENC_DT_Pin,
-			ENC_SW_GPIO_Port, ENC_SW_Pin, 0, 180);
+	// ==========================================================================
+	// 4. CONFIGURACIÓN DEL ENCODER KY-040
+	// ==========================================================================
+	// Armamos los descriptores de los pines físicos
+	generic_gpio_t enc_clk = { .port = ENC_CLK_GPIO_Port, .pin = ENC_CLK_Pin };
+	generic_gpio_t enc_dt  = { .port = ENC_DT_GPIO_Port,  .pin = ENC_DT_Pin  };
+	generic_gpio_t enc_sw  = { .port = ENC_SW_GPIO_Port,  .pin = ENC_SW_Pin  };
 
+	// Inicialización agnóstica inyectando la PAL Universal
+	KY040_Init(&encoder_ctrl, sys_pal, enc_clk, enc_dt, enc_sw, 0, 180);
 
-	// Configuración inicial estética
 	// Sincronizamos la posición inicial del servo con el encoder (90 grados)
 	SERVO_SG90_SetAngle(&servo_main, encoder_ctrl.position);
 	Debug_Log("[OK] Encoder KY-040: Rango 0-180 Configurado\r\n");
+
 	Display7Seg_SetBrightness(&Display, 80);
 	Display7Seg_WriteString(&Display, "HI");
 	Debug_Log(">>> Sistema listo...\r\n\r\n");
@@ -242,7 +320,6 @@ int main(void)
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-
 		// 1. MOTOR: Actualizar posición intermedia del servo (interpolación suave)
 		SERVO_SG90_Update(&servo_main);
 
@@ -269,6 +346,7 @@ int main(void)
 		if (encoder_ctrl.sw_pressed) {
 			encoder_ctrl.position = 90;
 			encoder_ctrl.sw_pressed = 0;
+			HAL_GPIO_TogglePin(usr_ledAzul_GPIO_Port, usr_ledAzul_Pin);
 			Debug_Log(">>> Encoder Reset: 90 Grad\r\n");
 		}
 	}
@@ -566,7 +644,7 @@ static void MX_GPIO_Init(void)
 	HAL_GPIO_WritePin(GPIOG, SEG_G_Pin|USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, EN1_Pin|EN2_Pin|EN3_Pin|EN4_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pins : SEG_C_Pin SEG_A_Pin SEG_B_Pin */
 	GPIO_InitStruct.Pin = SEG_C_Pin|SEG_A_Pin|SEG_B_Pin;
@@ -614,8 +692,8 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
 
-	/*Configure GPIO pins : EN1_Pin EN2_Pin EN3_Pin */
-	GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|EN3_Pin;
+	/*Configure GPIO pins : EN1_Pin EN2_Pin EN3_Pin EN4_Pin */
+	GPIO_InitStruct.Pin = EN1_Pin|EN2_Pin|EN3_Pin|EN4_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -666,14 +744,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	// Pasamos el pin que disparó la interrupción al manejador del driver
-	// El driver internamente comparará si es ENC_CLK_Pin o ENC_SW_Pin
-	KY040_IRQ_Handler(&encoder_ctrl, GPIO_Pin);
+	/* Instanciamos el descriptor genérico para identificar el pin disparado */
+	generic_gpio_t triggered_gpio;
+	triggered_gpio.pin = GPIO_Pin;
+
+	/* Mapeamos el puerto correcto según el pin físico de la STM32 */
+	if (GPIO_Pin == ENC_CLK_Pin)
+	{
+		triggered_gpio.port = ENC_CLK_GPIO_Port;
+		KY040_IRQ_Handler(&encoder_ctrl, triggered_gpio);
+	}
+	else if (GPIO_Pin == ENC_SW_Pin)
+	{
+		triggered_gpio.port = ENC_SW_GPIO_Port;
+		KY040_IRQ_Handler(&encoder_ctrl, triggered_gpio);
+	}
 
 	// Opcional: Si tienes el botón de la placa (USER_Btn_Pin), puedes manejarlo aquí
-	if (GPIO_Pin == USER_Btn_Pin) {
-		// Tu lógica para el botón azul de la Nucleo si quisieras usarlo
-	}
 }
 
 /* USER CODE END 4 */
