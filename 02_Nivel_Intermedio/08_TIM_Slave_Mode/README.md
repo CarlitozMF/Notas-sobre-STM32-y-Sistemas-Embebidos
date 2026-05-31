@@ -80,7 +80,9 @@ A diferencia de la medición convencional por software (polling) o por captura d
 
 Al finalizar la ventana de 100ms impuesta por el TIM3, la Capa de Abstracción (PAL) toma una "fotografía" instantánea del registro `CNT` y lo resetea a cero de forma inmediata para la siguiente ventana. El cálculo de la frecuencia en Hz es directo y asíncrono:
 
-$$\text{Frecuencia (Hz)} = \text{Pulsos} \times \left(\frac{1000}{\text{TCS\_MEASURE\_WINDOW\_MS}}\right)$$
+$$\text{Frecuencia (Hz)} = \text{Pulsos} \times \left( \frac{1000}{\text{Ventana Muestreo}} \right)$$
+
+Donde la **Ventana Muestreo** corresponde al `#define` `TCS_MEASURE_WINDOW_MS`.
 
 ### 2. Digitalización de Color: Reconstrucción del Vector RGB
 El sensor **TCS3200** traduce la intensidad de luz filtrada en una onda cuadrada. Para procesar esta información de forma coherente, el sistema implementa un **Secuenciador de Filtros**:
