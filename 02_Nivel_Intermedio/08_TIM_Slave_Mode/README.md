@@ -1,4 +1,4 @@
- # 08_TIM_Slave_Mode: Clasificación de materiales mediante digitalización de frecuencia por Hardware y Arquitectura PAL
+ # 08_TIM_Slave_Mode: Clasificación de materiales mediante digitalización de frecuencia por Hardware
 
 Este proyecto documenta la implementación del modo **Timer Slave (External Clock Mode 1)** para la medición de alta velocidad de señales de frecuencia provenientes de un sensor de color **TCS3200**. Se integra una máquina de estados (MEF) de 8 niveles optimizada con firmas analíticas reales, un servo **SG90** con control de trayectoria suave y una arquitectura desacoplada multiplataforma mediante una **PAL (Platform Abstraction Layer)** y utilidades de bajo nivel de hardware (**DWT**) corriendo de forma asíncrona en la plataforma **Nucleo-F439ZI**.
 
